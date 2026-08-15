@@ -159,26 +159,21 @@ export default function OpeningPage() {
             </>
           )}
 
-          <button
-            type="button"
-            onClick={enterWard}
-            className={[
-              "hero-cta group isolate overflow-visible rounded-chip bg-navy text-[15px] font-semibold text-on-navy shadow-card",
-              "transition-[transform,box-shadow,background-color] duration-300",
-              "hover:bg-navy-deep hover:shadow-lift",
-              // Over a clip the control sits low, clear of the composition;
-              // over the artwork it lands on the button the artwork draws.
-              useClip ? "hero-cta-low" : "",
-            ].join(" ")}
-            style={{ transformOrigin: "center" }}
-          >
-            <span className="relative z-10">כניסה למחלקה</span>
-            {/* light passing under the cursor, not a colour change */}
-            <span
-              aria-hidden="true"
-              className="absolute inset-0 -translate-x-full bg-gradient-to-l from-transparent via-white/18 to-transparent transition-transform duration-700 group-hover:translate-x-full"
-            />
-          </button>
+          {useClip ? (
+            // The clip draws its own call to action, so the whole opening is
+            // the target rather than a second button sitting under the first.
+            <button type="button" onClick={enterWard} className="hero-enter">
+              <span className="sr-only">כניסה למחלקה</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={enterWard}
+              className="hero-cta group overflow-hidden rounded-chip bg-navy text-[15px] font-semibold text-on-navy shadow-card transition-[box-shadow,background-color] duration-300 hover:bg-navy-deep hover:shadow-lift"
+            >
+              כניסה למחלקה
+            </button>
+          )}
         </div>
 
         {/* fade into the page ground, so there is no seam below the stage */}

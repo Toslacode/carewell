@@ -51,7 +51,7 @@ export function DoorSlab({
       </div>
 
       {/* signage plaque, inline-start side */}
-      <div className="door-plaque absolute start-[5%] top-[26%] h-[13%] w-[11%] rounded-[3px] border border-[#E2D9CB] bg-[#FBF7F0] shadow-[0_1px_1px_rgba(90,74,52,.07)]">
+      <div className="door-plaque absolute right-[5%] top-[26%] h-[13%] w-[11%] rounded-[3px] border border-[#E2D9CB] bg-[#FBF7F0] shadow-[0_1px_1px_rgba(90,74,52,.07)]">
         <span className="door-plaque-in absolute inset-[22%] rounded-[1px] border border-[#DDD3C3]" />
       </div>
 
@@ -87,11 +87,17 @@ export function DoorSlab({
             </span>
           </span>
 
-          {/* Lever handle, inline-end side. Sits a little higher than a real
-              door's would so it survives the crop on the room-selection grid —
-              without the handle the slab stops reading as a door at all. */}
-          <span className="absolute end-[9%] top-[45%] h-[7px] w-[24%] rounded-[2px] bg-handle shadow-[0_1px_1px_rgba(0,0,0,.28)]" />
-          <span className="absolute end-[9%] top-[41%] h-[15px] w-[7px] rounded-[2px] bg-handle/90" />
+          {/* Lever handle. Physically right, not inline-end: the hinge is the
+              slab's left edge (see transformOrigin above), and a handle on the
+              hinge side is the one thing that makes a drawn door stop reading
+              as a door. Text direction has no say in which side a door opens
+              from — and the corridor canvas draws its handle on the right too,
+              so the hand-off from canvas to CSS stays continuous.
+
+              It sits a little higher than a real door's would so it survives
+              the crop on the room-selection grid. */}
+          <span className="absolute right-[9%] top-[45%] h-[7px] w-[24%] rounded-[2px] bg-handle shadow-[0_1px_1px_rgba(0,0,0,.28)]" />
+          <span className="absolute right-[9%] top-[41%] h-[15px] w-[7px] rounded-[2px] bg-handle/90" />
         </div>
 
         {/* the lit room revealed behind the slab as it swings */}

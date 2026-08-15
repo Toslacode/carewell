@@ -265,7 +265,7 @@ function waveSide(side, offset) {
 
 function viewOpen() {
   return `
-  <main id="main">
+  <main id="main" class="bare">
     <section class="hero">
       <div class="ground">
         <!-- Ambient ground: two cream fields on long, mutually prime cycles,
@@ -290,9 +290,9 @@ function viewOpen() {
           <source src="__OPENING_CLIP__" type="video/mp4" />
         </video>
         <img class="fallback-art breathe" src="__BRANDING__" alt="CLARIO — Turn rounds into action." />
-        <button class="enter-btn low" data-enter>
+        <button class="enter-btn low" data-enter aria-label="כניסה למחלקה">
+          <span class="sr-only">כניסה למחלקה</span>
           <span style="position:relative;z-index:1">כניסה למחלקה</span>
-          <span class="glint" aria-hidden="true"></span>
         </button>
       </div>
 

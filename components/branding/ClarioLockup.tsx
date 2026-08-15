@@ -65,11 +65,11 @@ export function ClarioMark({ className }: { className?: string }) {
 /**
  * The wordmark.
  *
- * The artwork sets CLARI in deep navy and closes on an O drawn as an open ring
- * in the accent blue — the one place the identity carries a second colour. The
- * reduction keeps exactly that: the same letters, the same split, and the ring
- * redrawn as a glyph-sized circle, which survives at 15px where the artwork's
- * hairline stroke would not.
+ * The artwork sets CLARI in deep navy and closes on an O in the accent blue —
+ * the one place the identity carries a second colour. The reduction keeps that
+ * split and nothing else: real letters, so the name reads as CLARIO in text,
+ * in search, and to a screen reader. An earlier version drew the O as a ring;
+ * a ring is a shape, not a letter, and the name has to survive being read.
  */
 export function ClarioWordmark({
   className,
@@ -81,19 +81,12 @@ export function ClarioWordmark({
   return (
     <span
       className={cn(
-        "inline-flex items-center whitespace-nowrap font-semibold uppercase leading-none tracking-[0.2em]",
+        "whitespace-nowrap font-semibold uppercase leading-none tracking-[0.16em]",
         className,
       )}
     >
-      <span className={onNavy ? "text-white" : "text-navy-deep"}>Clari</span>
-      <span
-        aria-hidden="true"
-        className={cn(
-          "ms-[0.06em] inline-block aspect-square w-[0.74em] rounded-full border-[0.15em]",
-          onNavy ? "border-white/85" : "border-accent",
-        )}
-      />
-      <span className="sr-only">O</span>
+      <span className={onNavy ? "text-white" : "text-navy-deep"}>CLARI</span>
+      <span className={onNavy ? "text-white/90" : "text-accent"}>O</span>
     </span>
   );
 }

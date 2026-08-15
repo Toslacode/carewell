@@ -240,6 +240,9 @@ output {
 }
 main { padding: 24px 16px 16px; }
 @media (min-width: 640px) { main { padding: 24px 24px 16px; } }
+/* The opening is full-bleed: the clip runs edge to edge, and the corridor is a
+   sticky viewport. Neither can afford the page gutter. */
+main.bare { padding: 0; }
 
 .app-header { padding: 16px 16px 0; }
 @media (min-width: 640px) { .app-header { padding: 24px 24px 0; } }
@@ -305,20 +308,13 @@ main { padding: 24px 16px 16px; }
   align-items: center;
   font-size: 17px;
   font-weight: 700;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--navy-deep);
 }
-/* The O of CLARIO, drawn as the open ring the artwork uses — the one place the
-   identity carries its second colour. */
-.lockup .word .ring {
-  display: inline-block;
-  margin-inline-start: 0.06em;
-  width: 0.74em;
-  aspect-ratio: 1;
-  border: 0.15em solid var(--accent);
-  border-radius: var(--radius-chip);
-}
+/* The closing O carries the identity's second colour. Real letters, not a
+   drawn ring: the name has to survive being read. */
+.lockup .word b { font-weight: inherit; color: var(--accent); }
 .staff {
   display: none;
   align-items: center;
@@ -516,27 +512,47 @@ main { padding: 24px 16px 16px; }
   max-height: 100dvh;
   transition: transform 560ms ease-out, opacity 560ms ease-out, filter 560ms ease-out;
 }
-.hero .stage.is-video { --stage: 16 / 9; }
+/* With a clip, the stage stops being a stage: it fills the viewport edge to
+   edge. Letterboxed in the middle of a cream page, the clip read as a picture
+   pasted onto the page — the frame around it was the whole problem. Covering
+   removes the frame, and because the clip's own ground is this same cream, the
+   crop only ever trims empty cream at the sides. */
+.hero .stage.is-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  max-height: none;
+  aspect-ratio: auto;
+}
 
-/* The clip is shown whole. The feather touches only the outermost few percent,
-   enough to dissolve the edge into the cream without eating composition. */
 .hero-video {
   position: absolute;
   inset: 0;
   height: 100%;
   width: 100%;
-  object-fit: contain;
+  object-fit: cover;
   /* Cream before the first frame decodes, so the opening never flashes. */
   background: var(--hero-ground);
-  -webkit-mask-image: radial-gradient(142% 132% at 50% 50%, #000 80%, transparent 100%);
-  mask-image: radial-gradient(142% 132% at 50% 50%, #000 80%, transparent 100%);
 }
 /* The board stands in only when the clip cannot play here. */
 .hero .stage.is-video .fallback-art { display: none; }
 .hero .stage.no-clip { --stage: 1672 / 941; }
 .hero .stage.no-clip .hero-video { display: none; }
 .hero .stage.no-clip .fallback-art { display: block; }
-.hero .stage.no-clip .enter-btn.low { top: 75.45%; bottom: auto; transform: translate(-50%, -50%); }
+.hero .stage.no-clip .enter-btn.low {
+  position: absolute;
+  inset: auto;
+  left: 50%;
+  top: 75.45%;
+  width: max(196px, 19.6%);
+  min-height: max(46px, 8.6%);
+  transform: translate(-50%, -50%);
+  padding: 0 24px;
+  background: var(--navy);
+  box-shadow: var(--shadow-card);
+  border-radius: var(--radius-chip);
+}
+.hero .stage.no-clip .enter-btn.low span:not(.sr-only) { display: inline; }
 .hero .stage .fallback-art {
   position: absolute;
   inset: 0;
@@ -609,25 +625,25 @@ main { padding: 24px 16px 16px; }
   padding: 0 24px;
 }
 .hero .enter-btn:hover { transform: translate(-50%, -50%) scale(1.02); }
-/* Over a clip the control sits low, clear of the composition. */
+/* The clip draws its own call to action. A second live button underneath it
+   read as a reflection of the first, so with a clip there is no second button:
+   the whole opening is the target, and the control is invisible until a
+   keyboard focuses it. */
 .hero .enter-btn.low {
-  top: auto;
-  bottom: 5%;
-  width: auto;
-  min-width: 216px;
-  transform: translate(-50%, 0);
-  padding: 14px 32px;
-}
-.hero .enter-btn.low:hover { transform: translate(-50%, 0) scale(1.02); }
-/* A cream breath behind it, so it reads over any frame without a scrim. */
-.hero .enter-btn.low::before {
-  content: "";
   position: absolute;
-  inset: -220% -60%;
-  z-index: -1;
-  border-radius: var(--radius-chip);
-  background: radial-gradient(closest-side, rgba(245, 233, 222, 0.86), rgba(245, 233, 222, 0));
+  inset: 0;
+  top: 0;
+  width: 100%;
+  min-height: 0;
+  transform: none;
+  padding: 0;
+  background: none;
+  box-shadow: none;
+  border-radius: 0;
 }
+.hero .enter-btn.low:hover { transform: none; background: none; box-shadow: none; }
+.hero .enter-btn.low span:not(.sr-only) { display: none; }
+.hero .enter-btn.low .glint { display: none; }
 .enter-btn {
   position: relative;
   overflow: hidden;
@@ -852,7 +868,7 @@ main { padding: 24px 16px 16px; }
 .door .rails span { height: 7px; width: 22%; border-radius: 2px; background: #cfc6b8; }
 .door .plaque {
   position: absolute;
-  inset-inline-start: 5%;
+  right: 5%;
   top: 26%;
   height: 13%;
   width: 11%;
@@ -913,9 +929,12 @@ main { padding: 24px 16px 16px; }
   text-shadow: 0 1px 2px rgba(90, 68, 38, 0.28);
   user-select: none;
 }
+/* Physically right, not inline-end: the hinge is the slab's left edge, and a
+   handle on the hinge side is the one thing that stops a drawn door reading as
+   a door. Text direction has no say in which side a door opens from. */
 .door .lever-a {
   position: absolute;
-  inset-inline-end: 9%;
+  right: 9%;
   top: 45%;
   height: 7px;
   width: 24%;
@@ -925,7 +944,7 @@ main { padding: 24px 16px 16px; }
 }
 .door .lever-b {
   position: absolute;
-  inset-inline-end: 9%;
+  right: 9%;
   top: 41%;
   height: 15px;
   width: 7px;

@@ -623,33 +623,42 @@
   width: min(100%, calc(100dvh * (var(--stage))));
   max-height: 100dvh;
 }
-.hero-stage.is-video { --stage: 16 / 9; }
+/* With a clip, the stage stops being a stage: it fills the viewport edge to
+   edge. Letterboxed in the middle of a cream page, the clip read as a picture
+   pasted onto the page — the frame around it was the whole problem. Covering
+   removes the frame, and because the clip's own ground is this same cream, the
+   crop only ever trims empty cream at the sides. */
+.hero-stage.is-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  max-height: none;
+  aspect-ratio: auto;
+}
 
-/* The clip is shown whole. The feather touches only the outermost few percent,
-   enough to dissolve the edge into the cream without eating composition. */
 .hero-video {
   position: absolute;
   inset: 0;
   height: 100%;
   width: 100%;
-  object-fit: contain;
-  /* The stage is cream before the first frame decodes, so the opening never
-     flashes a black box. */
+  object-fit: cover;
+  /* Cream before the first frame decodes, so the opening never flashes. */
   background: var(--hero-ground);
-  -webkit-mask-image: radial-gradient(142% 132% at 50% 50%, #000 80%, transparent 100%);
-  mask-image: radial-gradient(142% 132% at 50% 50%, #000 80%, transparent 100%);
 }
 
-/* A cream breath behind the entry control, so it stays legible over whatever
-   frame is under it without a slab or a scrim across the clip. */
-.hero-cta::before {
-  content: "";
+/* The clip draws its own call to action. A second live button underneath it
+   read as a reflection of the first, so with a clip there is no second button:
+   the whole opening is the target, and the only rendered control is invisible
+   until a keyboard focuses it. */
+.hero-enter {
   position: absolute;
-  inset: -220% -60%;
-  z-index: -1;
-  border-radius: var(--radius-chip);
-  background: radial-gradient(closest-side, rgb(var(--hero-ground-rgb) / 0.86), rgb(var(--hero-ground-rgb) / 0));
+  inset: 0;
+  width: 100%;
+  cursor: pointer;
+  border: 0;
+  background: none;
 }
+.hero-enter:focus-visible { outline: 2px solid var(--navy); outline-offset: -6px; }
 
 .hero-art {
   position: absolute;
@@ -671,15 +680,6 @@
   width: max(196px, 19.6%);
   min-height: max(46px, 8.6%);
   transform: translate(-50%, -50%);
-}
-
-.hero-cta-low {
-  top: auto;
-  bottom: 5%;
-  transform: translate(-50%, 0);
-  width: auto;
-  min-width: 216px;
-  padding: 14px 32px;
 }
 
 .hero-fade {

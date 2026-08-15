@@ -100,7 +100,7 @@ function emptyState(icon, title, hint) {
 }
 
 function lockup() {
-  return `<span class="lockup"><span class="mark">${I.clarioMark('style="width:22px;height:22px"')}</span><span class="word">Clari<i class="ring" aria-hidden="true"></i><span class="sr-only">O</span></span></span>`;
+  return `<span class="lockup"><span class="mark">${I.clarioMark('style="width:22px;height:22px"')}</span><span class="word">CLARI<b>O</b></span></span>`;
 }
 
 function header(opts) {
