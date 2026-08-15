@@ -328,9 +328,15 @@ main.bare { padding: 0; }
   background: var(--navy);
   color: var(--on-navy);
 }
+/* A Latin name inside an RTL page. Two things had to go wrong together to
+   spell it backwards, and both are fixed here: inline-flex made the letters
+   two flex items, which an RTL container lays out right to left ("OCLARI"),
+   and without an explicit direction the bidi algorithm is free to reorder the
+   runs at all. Plain inline text, isolated as LTR — the wordmark is a name, not
+   a phrase in the surrounding language. */
 .lockup .word {
-  display: inline-flex;
-  align-items: center;
+  direction: ltr;
+  unicode-bidi: isolate;
   font-size: 17px;
   font-weight: 700;
   letter-spacing: 0.16em;

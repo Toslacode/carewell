@@ -80,8 +80,13 @@ export function ClarioWordmark({
 }) {
   return (
     <span
+      // ltr + isolate: a Latin name inside an RTL page. Without it the bidi
+      // algorithm is free to reorder the two coloured runs and spell the name
+      // backwards — and any layout that turns them into separate boxes (a flex
+      // container, say) will do exactly that.
+      dir="ltr"
       className={cn(
-        "whitespace-nowrap font-semibold uppercase leading-none tracking-[0.16em]",
+        "inline-block whitespace-nowrap font-semibold uppercase leading-none tracking-[0.16em] [unicode-bidi:isolate]",
         className,
       )}
     >
@@ -104,7 +109,9 @@ export function ClarioLockup({
       <span className="flex flex-col gap-0.5">
         <ClarioWordmark className="text-[15px]" />
         {tagline && (
-          <span className="text-[11px] leading-none text-ink-muted">
+          // Same isolation as the wordmark: an English sentence in an RTL page
+          // otherwise has its closing full stop reordered to the front.
+          <span dir="ltr" className="text-[11px] leading-none text-ink-muted [unicode-bidi:isolate]">
             Turn rounds into action.
           </span>
         )}
