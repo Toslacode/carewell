@@ -11,6 +11,7 @@ import {
   isFresh,
 } from "@/components/clinical/EditableList";
 import { IconButton } from "@/components/ui/primitives";
+import { Reveal } from "@/components/motion/Reveal";
 import {
   IconAlert,
   IconChat,
@@ -29,7 +30,14 @@ import {
  * the same place on every patient, every morning; that predictability is worth
  * more than collapsing empty sections would save.
  */
-export function ClinicalRecord({ patient }: { patient: Patient }) {
+export function ClinicalRecord({
+  patient,
+  structuring = false,
+}: {
+  patient: Patient;
+  /** True while the AI is rewriting the draft — drives the scan sweep. */
+  structuring?: boolean;
+}) {
   const isDraft = patient.draftClinicalData !== null;
   const data = patient.draftClinicalData ?? patient.approvedClinicalData;
 
@@ -39,7 +47,12 @@ export function ClinicalRecord({ patient }: { patient: Patient }) {
         <NeedsReviewPanel patient={patient} data={data} />
       )}
 
-      <div className="overflow-hidden rounded-card border border-line bg-card shadow-card">
+      <div
+        className={cn(
+          "overflow-hidden rounded-card border bg-card shadow-card transition-colors duration-500",
+          structuring ? "scanning border-info-line" : "border-line",
+        )}
+      >
         <Section
           index={1}
           title="תלונה עיקרית"
@@ -175,7 +188,9 @@ function Section({
   last?: boolean;
 }) {
   return (
-    <section
+    <Reveal
+      as="section"
+      index={index}
       className={cn(
         "flex flex-col gap-2 px-4 py-4 sm:flex-row sm:gap-6 sm:px-6 sm:py-5",
         !last && "border-b border-line",
@@ -191,7 +206,7 @@ function Section({
         </span>
       </h3>
       <div className="min-w-0 flex-1">{children}</div>
-    </section>
+    </Reveal>
   );
 }
 
@@ -259,6 +274,7 @@ function VitalCard({
     <li
       className={cn(
         "group/vital relative rounded-[12px] border bg-card-raised px-3 py-2.5",
+        "transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-sm",
         reading ? "border-line" : "border-dashed border-line-strong",
         fresh && "settle",
       )}

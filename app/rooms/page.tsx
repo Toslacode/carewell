@@ -12,6 +12,7 @@ import {
 import { summariseRoom, useWard } from "@/lib/store/ward-store";
 import type { Room } from "@/lib/schemas/clinical";
 import { IconClipboard } from "@/components/ui/icons";
+import { Reveal } from "@/components/motion/Reveal";
 
 export default function RoomsPage() {
   const router = useRouter();
@@ -115,15 +116,15 @@ export default function RoomsPage() {
 
           {/* 5 / 5 / 5 on desktop, degrading to 3 and then 2 across. */}
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
-            {rooms.map((room) => (
-              <li key={room.id}>
+            {rooms.map((room, i) => (
+              <Reveal as="li" key={room.id} index={i} variant="pop">
                 <DoorTile
                   room={room}
                   summary={summariseRoom(room, patients)}
                   selected={entering?.room.id === room.id}
                   onSelect={enterRoom}
                 />
-              </li>
+              </Reveal>
             ))}
           </ul>
         </div>

@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/icons";
 import { patientCount } from "@/lib/labels";
 import { summariseRoom, useWard } from "@/lib/store/ward-store";
+import { Reveal } from "@/components/motion/Reveal";
 
 /**
  * Screen 2 — inside a room.
@@ -70,11 +71,13 @@ export default function RoomPage({
               <SummaryTile
                 icon={<IconUser className="h-5 w-5" />}
                 label="מספר מטופלים"
+                index={0}
                 value={summary.patients}
               />
               <SummaryTile
                 icon={<IconClipboard className="h-5 w-5" />}
                 label="משימות פתוחות"
+                index={1}
                 value={summary.openTasks}
                 emphasis={summary.urgentTasks > 0 ? "urgent" : undefined}
                 note={
@@ -86,6 +89,7 @@ export default function RoomPage({
               <SummaryTile
                 icon={<IconHeart className="h-5 w-5" />}
                 label="שחרורים אפשריים"
+                index={2}
                 value={summary.possibleDischarges}
               />
             </ul>
@@ -110,9 +114,9 @@ export default function RoomPage({
           ) : (
             <ul className="flex flex-col gap-3 sm:gap-4">
               {list.map((patient, i) => (
-                <li key={patient.id} className="rise" style={{ ["--d" as string]: i }}>
+                <Reveal as="li" key={patient.id} index={i + 3}>
                   <PatientCard patient={patient} />
-                </li>
+                </Reveal>
               ))}
             </ul>
           )}
@@ -134,16 +138,18 @@ function SummaryTile({
   value,
   note,
   emphasis,
+  index = 0,
 }: {
   icon: React.ReactNode;
   label: string;
   value: number;
   note?: string;
   emphasis?: "urgent";
+  index?: number;
 }) {
   return (
-    <li>
-      <Card className="flex items-center gap-4 px-5 py-4">
+    <Reveal as="li" index={index} variant="pop">
+      <Card className="flex items-center gap-4 px-5 py-4 transition-shadow duration-300 hover:shadow-lift">
         <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-line bg-card-sunken text-ink-muted">
           {icon}
         </span>
@@ -167,6 +173,6 @@ function SummaryTile({
           </span>
         </span>
       </Card>
-    </li>
+    </Reveal>
   );
 }

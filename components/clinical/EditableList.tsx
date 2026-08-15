@@ -117,6 +117,8 @@ function Row({
     <li
       className={cn(
         "group/row flex items-start gap-2 rounded-md py-1 pe-1 ps-1.5 transition-colors hover:bg-page-deep/60",
+        // A line the AI just placed arrives rather than appearing.
+        fresh && "reveal shown",
         fresh && "settle",
       )}
     >

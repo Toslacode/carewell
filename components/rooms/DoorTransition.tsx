@@ -9,16 +9,14 @@ import type { Room } from "@/lib/schemas/clinical";
  * Entering a room.
  *
  * The clicked door is cloned at its exact on-screen position, flown toward the
- * viewer, and swung open on its hinge before the room screen takes over. The
- * whole move is ~720ms: cinematic, but a doctor does this fifteen times a
- * morning, so it never gets to feel like a cutscene.
+ * viewer, swung open on its hinge, and walked through as the light from the
+ * room floods past. Four beats, ~820ms end to end: cinematic, but a doctor
+ * triggers this fifteen times a morning, so it never becomes a cutscene.
  *
- * Scale, perspective and mask only — no WebGL, no physics, nothing that has to
- * warm up before the first click of the day.
- *
- * When a door-opening clip is supplied it plays in place of the CSS swing; the
- * selected room number stays composited on top either way, so one generic clip
- * serves all fifteen rooms.
+ * Scale, perspective, mask and light only — no WebGL, nothing that has to warm
+ * up before the first click of the day. When a door clip is supplied it plays
+ * in place of the CSS swing with the selected room number composited on top,
+ * so one generic clip serves all fifteen rooms.
  */
 
 export interface DoorOrigin {
@@ -28,7 +26,7 @@ export interface DoorOrigin {
   height: number;
 }
 
-type Stage = "zoom" | "open" | "flood";
+type Stage = "zoom" | "open" | "through" | "flood";
 
 export function DoorTransition({
   room,
@@ -44,9 +42,12 @@ export function DoorTransition({
 
   useEffect(() => {
     const timers: ReturnType<typeof setTimeout>[] = [];
-    timers.push(setTimeout(() => setStage("open"), 240));
-    timers.push(setTimeout(() => setStage("flood"), 560));
-    timers.push(setTimeout(onDone, 760));
+    timers.push(setTimeout(() => setStage("open"), 230));
+    // The push through the doorway begins while the slab is still swinging —
+    // waiting for it to finish is what makes this kind of transition drag.
+    timers.push(setTimeout(() => setStage("through"), 470));
+    timers.push(setTimeout(() => setStage("flood"), 660));
+    timers.push(setTimeout(onDone, 820));
     return () => timers.forEach(clearTimeout);
   }, [onDone]);
 
@@ -56,17 +57,21 @@ export function DoorTransition({
   const targetWidth = targetHeight * 0.8;
 
   const zoomed = stage !== "zoom";
+  // Final beat: the camera moves through the doorway rather than the door
+  // simply fading, which is what sells the walk.
+  const through = stage === "through" || stage === "flood";
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-page"
+      className="fixed inset-0 z-50 overflow-hidden bg-page"
       role="presentation"
       aria-hidden="true"
+      style={{ perspective: "1200px" }}
     >
       <div
-        className="absolute transition-all duration-[520ms] ease-[cubic-bezier(.3,.7,.25,1)]"
-        style={
-          zoomed
+        className="absolute transition-all duration-[560ms] ease-[cubic-bezier(.3,.7,.25,1)]"
+        style={{
+          ...(zoomed
             ? {
                 top: (window.innerHeight - targetHeight) / 2,
                 left: (window.innerWidth - targetWidth) / 2,
@@ -78,8 +83,12 @@ export function DoorTransition({
                 left: origin.left,
                 width: origin.width,
                 height: origin.height,
-              }
-        }
+              }),
+          transform: through ? "scale(2.6)" : "scale(1)",
+          transformOrigin: "center center",
+          transitionDuration: through ? "360ms" : "560ms",
+          opacity: stage === "flood" ? 0 : 1,
+        }}
       >
         {DOOR_VIDEO ? (
           <>
@@ -105,10 +114,15 @@ export function DoorTransition({
         )}
       </div>
 
-      {/* the light from the room, flooding out as the door clears */}
+      {/* The light from the room, arriving as the slab clears and blowing out
+          as the camera crosses the threshold. */}
       <div
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_48%,#FFFEFA_0%,#FBF5EA_45%,rgba(247,241,232,0)_78%)] transition-opacity duration-[240ms]"
-        style={{ opacity: stage === "flood" ? 1 : 0 }}
+        className="pointer-events-none absolute inset-0 transition-opacity duration-[300ms]"
+        style={{
+          opacity: stage === "flood" ? 1 : stage === "through" ? 0.5 : 0,
+          background:
+            "radial-gradient(circle at 50% 48%, #FFFEFA 0%, #FBF5EA 42%, rgba(247,241,232,0) 76%)",
+        }}
       />
     </div>
   );

@@ -101,6 +101,17 @@ export function DoorSlab({
               "linear-gradient(180deg,#FFFDF8 0%,#FBF4E8 55%,#F3E9D8 100%)",
           }}
         />
+
+        {/* Warm light leaking from under the door on hover: the smallest
+            possible cue that there is a lit room on the other side. */}
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-[6%] bottom-0 h-[14%] rounded-t-[4px] opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+          style={{
+            background:
+              "linear-gradient(0deg, rgba(255,244,214,.85) 0%, rgba(255,244,214,0) 100%)",
+          }}
+        />
       </div>
     </div>
   );
@@ -150,11 +161,11 @@ export function DoorTile({
         // sizing, so it shrinks to its caption text inside a grid cell rather
         // than filling it — which made every door a different size.
         "group relative flex h-full w-full flex-col overflow-hidden rounded-card border bg-card text-start",
-        "transition-[transform,box-shadow,border-color] duration-200",
+        "transition-[transform,box-shadow,border-color] duration-[280ms] ease-[cubic-bezier(.22,.61,.36,1)]",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy focus-visible:ring-offset-2 focus-visible:ring-offset-page",
         unavailable
           ? "cursor-not-allowed border-line opacity-55"
-          : "border-line shadow-card hover:-translate-y-0.5 hover:border-line-strong hover:shadow-lift",
+          : "border-line shadow-card hover:-translate-y-1 hover:border-line-strong hover:shadow-lift active:translate-y-0 active:duration-100",
         selected && "border-navy shadow-lift",
       )}
     >

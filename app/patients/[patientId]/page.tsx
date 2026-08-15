@@ -1,6 +1,6 @@
 "use client";
 
-import { use } from "react";
+import { use, useCallback, useState } from "react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { ClinicalRecord } from "@/components/clinical/ClinicalRecord";
 import { OperationalColumn } from "@/components/tasks/OperationalColumn";
@@ -23,6 +23,11 @@ export default function PatientPage({
   params: Promise<{ patientId: string }>;
 }) {
   const { patientId } = use(params);
+  const [structuring, setStructuring] = useState(false);
+  const onPhaseChange = useCallback(
+    (phase: string) => setStructuring(phase === "structuring"),
+    [],
+  );
   const { getPatient, getRoom } = useWard();
   const patient = getPatient(patientId);
 
@@ -94,7 +99,7 @@ export default function PatientPage({
           </dl>
 
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-            <ClinicalRecord patient={patient} />
+            <ClinicalRecord patient={patient} structuring={structuring} />
             <OperationalColumn patient={patient} />
           </div>
 
@@ -103,7 +108,7 @@ export default function PatientPage({
         </div>
       </main>
 
-      <RecordingBar patient={patient} />
+      <RecordingBar patient={patient} onPhaseChange={onPhaseChange} />
     </>
   );
 }

@@ -218,6 +218,105 @@
   animation: carewell-pulse 1.6s ease-in-out infinite;
 }
 
+/* ---------------------------------------------------------------------------
+   Ambient motion.
+
+   Everything below is slow, low-contrast and non-looping-to-the-eye. The test
+   for anything in this section is whether a doctor reading a creatinine value
+   notices it. If they do, it's too much.
+--------------------------------------------------------------------------- */
+
+/* Opening backdrop: two soft fields drifting against each other, standing in
+   for the ambient hero footage. Minute-long cycles, no perceptible loop. */
+@keyframes carewell-drift-a {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(-3%, 2%, 0) scale(1.08); }
+}
+
+@keyframes carewell-drift-b {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1.05); }
+  50% { transform: translate3d(4%, -3%, 0) scale(1); }
+}
+
+/* A slow specular pass over the branding artwork — the one thing that keeps a
+   still image from reading as a screenshot. */
+@keyframes carewell-sheen {
+  0% { transform: translateX(-120%) skewX(-12deg); opacity: 0; }
+  12% { opacity: 0.5; }
+  38% { opacity: 0; }
+  100% { transform: translateX(220%) skewX(-12deg); opacity: 0; }
+}
+
+/* Breathing on the artwork itself: sub-percent scale, far below the threshold
+   where it reads as movement, but enough that the screen isn't dead. */
+@keyframes carewell-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.012); }
+}
+
+/* Expanding ring off the record button. */
+@keyframes carewell-ring {
+  0% { transform: scale(1); opacity: 0.55; }
+  100% { transform: scale(1.75); opacity: 0; }
+}
+
+/* Sweep across a panel the AI is currently rewriting. */
+@keyframes carewell-scan {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+
+@keyframes carewell-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes carewell-pop {
+  0% { transform: scale(0.94); opacity: 0; }
+  60% { transform: scale(1.015); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.drift-a { animation: carewell-drift-a 46s ease-in-out infinite; }
+.drift-b { animation: carewell-drift-b 61s ease-in-out infinite; }
+.breathe { animation: carewell-breathe 14s ease-in-out infinite; }
+.sheen { animation: carewell-sheen 9s ease-in-out 1.4s infinite; }
+
+.ring-1 { animation: carewell-ring 2.1s ease-out infinite; }
+.ring-2 { animation: carewell-ring 2.1s ease-out 0.7s infinite; }
+
+.scanning {
+  position: relative;
+  overflow: hidden;
+}
+.scanning::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(27, 58, 92, 0.07),
+    transparent
+  );
+  animation: carewell-scan 1.5s linear infinite;
+}
+
+/* Entrance used by the Reveal component. `--d` staggers siblings. */
+.reveal {
+  opacity: 0;
+}
+.reveal.shown {
+  animation: carewell-in 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  animation-delay: calc(var(--d, 0) * 55ms);
+}
+.pop.shown {
+  animation: carewell-pop 0.42s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  animation-delay: calc(var(--d, 0) * 45ms);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -234,6 +333,32 @@
     animation: none;
     background-color: var(--navy-wash);
     box-shadow: 0 0 0 6px var(--navy-wash);
+  }
+
+  /* Reveals must resolve to visible, not stay stuck at opacity 0. */
+  .reveal,
+  .reveal.shown,
+  .pop.shown {
+    animation: none !important;
+    opacity: 1;
+    transform: none;
+  }
+
+  /* Ambient motion is decoration by definition — it all stops. */
+  .drift-a,
+  .drift-b,
+  .breathe,
+  .sheen,
+  .ring-1,
+  .ring-2 {
+    animation: none !important;
+  }
+  .sheen {
+    display: none;
+  }
+  .scanning::after {
+    animation: none;
+    display: none;
   }
 }
 

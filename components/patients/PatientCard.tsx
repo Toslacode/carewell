@@ -25,7 +25,7 @@ export function PatientCard({ patient }: { patient: Patient }) {
   return (
     <Link
       href={`/patients/${patient.id}`}
-      className="group flex overflow-hidden rounded-card border border-line bg-card shadow-card transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:border-line-strong hover:shadow-lift focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy focus-visible:ring-offset-2 focus-visible:ring-offset-page"
+      className="group flex overflow-hidden rounded-card border border-line bg-card shadow-card transition-[transform,box-shadow,border-color] duration-[280ms] ease-[cubic-bezier(.22,.61,.36,1)] hover:-translate-y-1 hover:border-line-strong hover:shadow-lift active:translate-y-0 active:duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy focus-visible:ring-offset-2 focus-visible:ring-offset-page"
     >
       {/* bed chip */}
       <div className="flex w-[92px] shrink-0 flex-col items-center justify-center gap-2 border-e border-line bg-card-sunken px-2 py-6 sm:w-[104px]">
@@ -72,7 +72,7 @@ export function PatientCard({ patient }: { patient: Patient }) {
 
           <span className="hidden items-center gap-1.5 rounded-chip border border-line-strong px-3 py-1.5 text-[13px] font-semibold text-ink transition-colors group-hover:bg-page-deep sm:inline-flex">
             פתיחת מטופל
-            <IconChevron className="h-4 w-4 text-ink-muted" />
+            <IconChevron className="h-4 w-4 text-ink-muted transition-transform duration-300 group-hover:-translate-x-0.5" />
           </span>
         </div>
       </div>

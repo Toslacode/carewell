@@ -61,7 +61,15 @@ type Phase =
   | "review"
   | "failed";
 
-export function RecordingBar({ patient }: { patient: Patient }) {
+export function RecordingBar({
+  patient,
+  onPhaseChange,
+}: {
+  patient: Patient;
+  /** Lets the page mirror the recorder's state — the clinical record shows a
+   *  scan sweep while the AI is rewriting it. */
+  onPhaseChange?: (phase: Phase) => void;
+}) {
   const { startRound, applyExtraction, approveRound, discardRound, setTranscript } =
     useWard();
 
@@ -88,6 +96,8 @@ export function RecordingBar({ patient }: { patient: Patient }) {
   const isDraft = patient.draftClinicalData !== null;
 
   useEffect(() => setEngines(listEngines()), []);
+
+  useEffect(() => onPhaseChange?.(phase), [phase, onPhaseChange]);
 
   // Timer
   useEffect(() => {
@@ -222,7 +232,15 @@ export function RecordingBar({ patient }: { patient: Patient }) {
     <div className="sticky bottom-0 z-30 px-4 pb-4 sm:px-6">
       <section
         aria-label="הקלטת סבב"
-        className="mx-auto max-w-ward rounded-panel border border-line bg-card/95 shadow-bar backdrop-blur-sm"
+        className={cn(
+          "mx-auto max-w-ward rounded-panel border bg-card/95 shadow-bar backdrop-blur-sm",
+          "transition-[border-color,transform] duration-500",
+          phase === "recording"
+            ? "-translate-y-0.5 border-urgent-line"
+            : phase === "structuring"
+              ? "border-info-line"
+              : "border-line",
+        )}
       >
         {(error || aiNote) && (
           <div className="flex flex-col gap-1.5 border-b border-line px-4 py-2.5 sm:px-5">
@@ -290,7 +308,10 @@ export function RecordingBar({ patient }: { patient: Patient }) {
           {/* transcript */}
           <div className="min-w-0 flex-[1.4]">
             <p
-              className="line-clamp-2 text-[14px] leading-relaxed text-ink"
+              className={cn(
+                "line-clamp-2 text-[14px] leading-relaxed text-ink transition-colors duration-300",
+                phase === "recording" && "text-navy-deep",
+              )}
               aria-live="polite"
             >
               {transcript || (
@@ -301,7 +322,10 @@ export function RecordingBar({ patient }: { patient: Patient }) {
                 </span>
               )}
               {partialText && (
-                <span className="text-ink-muted"> {partialText}</span>
+                <span key={partialText} className="reveal shown text-ink-muted">
+                  {" "}
+                  {partialText}
+                </span>
               )}
             </p>
           </div>
@@ -347,9 +371,13 @@ export function RecordingBar({ patient }: { patient: Patient }) {
             )}
 
             {phase === "structuring" && (
-              <span className="flex items-center gap-2 text-[14px] font-medium text-info">
+              <span className="flex items-center gap-2.5 text-[14px] font-medium text-info">
                 <IconSparkle className="h-[18px] w-[18px] rec-dot" />
                 ה־AI ממיין את המידע…
+                <span
+                  aria-hidden="true"
+                  className="scanning h-1 w-16 overflow-hidden rounded-full bg-info-bg"
+                />
               </span>
             )}
 
@@ -415,10 +443,18 @@ function MicButton({ phase, onClick }: { phase: Phase; onClick: () => void }) {
     >
       <IconMic className="h-6 w-6" />
       {recording && (
-        <span
-          aria-hidden="true"
-          className="rec-dot absolute -inset-1 rounded-full border-2 border-urgent"
-        />
+        <>
+          {/* Two rings leaving the button on an offset cycle — the clearest
+              at-a-glance signal that the microphone is genuinely live. */}
+          <span
+            aria-hidden="true"
+            className="ring-1 pointer-events-none absolute inset-0 rounded-full border-2 border-urgent"
+          />
+          <span
+            aria-hidden="true"
+            className="ring-2 pointer-events-none absolute inset-0 rounded-full border-2 border-urgent"
+          />
+        </>
       )}
     </button>
   );
