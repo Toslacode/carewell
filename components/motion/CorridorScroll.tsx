@@ -39,16 +39,33 @@ const DOOR_DEPTH = 1.15;
  *  room-selection screen opens. */
 const WALK = 25.1;
 
+export interface DoorRect {
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+}
+
+/** The walk is finished at this point; the door ahead opens on its own. Short
+ *  of 1 so it fires while the reader is still moving, not after they stop. */
+const ARRIVE_AT = 0.975;
+
 export function CorridorScroll({
   label,
   className,
+  onArrive,
 }: {
   /** Describes what unfolds, for screen readers. The canvas carries no text. */
   label: string;
   className?: string;
+  /** Called once, when the walk reaches the door. `rect` is where the drawn
+   *  door sits on screen, so a DOM door can take over exactly on top of it. */
+  onArrive?: (rect: DoorRect | null) => void;
 }) {
   const sectionRef = useRef<HTMLElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const arriveRef = useRef(onArrive);
+  arriveRef.current = onArrive;
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -61,6 +78,9 @@ export function CorridorScroll({
     let shown = 0;
     let running = false;
     let raf = 0;
+    let arrived = false;
+    /** Where the far door sits on screen in CSS pixels. */
+    let doorRect: DoorRect | null = null;
 
     function resize() {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -152,6 +172,15 @@ export function CorridorScroll({
         ],
         slab,
       );
+      // Recorded in CSS pixels for the hand-off to the DOM door.
+      const scale = canvas!.clientWidth / W;
+      doorRect = {
+        left: dL * scale,
+        top: dT * scale,
+        width: (dR - dL) * scale,
+        height: (eB - dT) * scale,
+      };
+
       // handle, only once it is large enough to read
       const handleW = (dR - dL) * 0.13;
       if (handleW > 2) {
@@ -289,6 +318,26 @@ export function CorridorScroll({
       shown += (target - shown) * 0.12;
       if (Math.abs(target - shown) < 0.0015) shown = target;
       draw(shown);
+
+      // Reaching the end of the corridor IS the transition. The reader walked
+      // up to the door; the door opens. Making them press a button to do what
+      // the walk was already doing breaks the illusion the sequence buys.
+      if (!arrived && target >= ARRIVE_AT && arriveRef.current) {
+        arrived = true;
+        running = false;
+        cancelAnimationFrame(raf);
+        const box = canvas!.getBoundingClientRect();
+        arriveRef.current(
+          doorRect && {
+            left: box.left + doorRect.left,
+            top: box.top + doorRect.top,
+            width: doorRect.width,
+            height: doorRect.height,
+          },
+        );
+        return;
+      }
+
       if (running) raf = requestAnimationFrame(tick);
     }
 

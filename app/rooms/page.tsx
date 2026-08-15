@@ -134,7 +134,7 @@ export default function RoomsPage() {
 
       {entering && (
         <DoorTransition
-          room={entering.room}
+          number={entering.room.number}
           origin={entering.origin}
           onDone={() => router.push(`/rooms/${entering.room.id}`)}
         />

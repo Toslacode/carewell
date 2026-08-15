@@ -136,7 +136,10 @@ function TaskRow({ patient, task }: { patient: Patient; task: Task }) {
         : "pending";
 
   return (
-    <li className={cn("group/task px-4 py-3", done && "opacity-65")}>
+    <li
+      onDoubleClick={() => setEditing(true)}
+      className={cn("group/task px-4 py-3", done && "opacity-65")}
+    >
       <div className="flex items-start gap-2.5">
         <button
           type="button"

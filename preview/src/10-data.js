@@ -153,7 +153,7 @@ const SEEDS = {
       labs: ["ליפאז 890 U/L", "בילירובין 1.9 mg/dL", "CRP 96 mg/L"],
       imaging: ["US בטן: אבנים בכיס המרה, דרכי מרה תקינות"],
       workingDx: ["דלקת לבלב על רקע אבני מרה"],
-      plan: ["צום", "נוזלים IV", "משככי כאבים"],
+      plan: ["צום", "נוזלים IV", "מורפיום 2 מ״ג IV לפי צורך"],
       tasks: [
         { title: "MRCP", priority: "scheduled", status: "pending", category: "imaging", timing: "מחר" },
         { title: "ליפאז חוזר", priority: "today", status: "pending", category: "labs", timing: "היום" },
@@ -345,7 +345,7 @@ const SEEDS = {
       imaging: ["MRI אגן: ללא אוסטאומיאליטיס"],
       otherTests: ["תרבית מהפצע: נשלחה"],
       workingDx: ["פצע לחץ מזוהם", "תת־תזונה"],
-      plan: ["טיפול מקומי יומי", "אנטיביוטיקה", "תוספי תזונה", "מזרן אוויר"],
+      plan: ["טיפול מקומי יומי", "אנטיביוטיקה", "תוספי תזונה", "מזרן אוויר", "מורפיום לפני החלפת חבישה"],
       other: ["נדרשת הערכת המשך טיפול בקהילה"],
       tasks: [
         { title: "תרבית מהפצע", priority: "urgent", status: "done", category: "labs", timing: "עכשיו" },

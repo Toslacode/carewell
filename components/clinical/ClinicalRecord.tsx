@@ -272,6 +272,7 @@ function VitalCard({
 
   return (
     <li
+      onDoubleClick={() => setEditing(true)}
       className={cn(
         "group/vital relative rounded-[12px] border bg-card-raised px-3 py-2.5",
         "transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-sm",

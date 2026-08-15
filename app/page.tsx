@@ -4,7 +4,9 @@ import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CarewellMark, CarewellWordmark } from "@/components/branding/CarewellLockup";
 import { ScrollSequence } from "@/components/motion/ScrollSequence";
-import { CorridorScroll } from "@/components/motion/CorridorScroll";
+import { type DoorRect, CorridorScroll } from "@/components/motion/CorridorScroll";
+import { DoorTransition } from "@/components/rooms/DoorTransition";
+import { usePrefs } from "@/lib/store/prefs";
 import {
   BRANDING_IMAGE,
   HERO_POSTER,
@@ -33,18 +35,37 @@ import {
  */
 export default function OpeningPage() {
   const router = useRouter();
+  const { calm } = usePrefs();
   const [leaving, setLeaving] = useState(false);
+  const [doorway, setDoorway] = useState<DoorRect | null>(null);
+
+  /**
+   * The end of the walk. The reader has just spent three viewport-heights
+   * walking up to a closed door; the door opens and they step through. The rect
+   * is where the drawn door sits on screen, so the DOM door placed on top of it
+   * makes the hand-off from canvas to CSS invisible.
+   */
+  const arriveAtDoor = useCallback(
+    (rect: DoorRect | null) => {
+      if (calm || !rect || rect.width < 8) {
+        router.push("/rooms");
+        return;
+      }
+      router.prefetch("/rooms");
+      setDoorway(rect);
+    },
+    [calm, router],
+  );
 
   const enterWard = useCallback(() => {
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduced) {
+    if (calm) {
       router.push("/rooms");
       return;
     }
     router.prefetch("/rooms");
     setLeaving(true);
     window.setTimeout(() => router.push("/rooms"), 560);
-  }, [router]);
+  }, [calm, router]);
 
   // With artwork but no footage, the artwork *is* the hero — the entry action
   // sits below it rather than on top of a redundant vector lockup.
@@ -52,8 +73,8 @@ export default function OpeningPage() {
 
   return (
     <main id="main" className="bg-page">
-      <section className="relative isolate grid min-h-[100dvh] place-items-center overflow-hidden">
-        <div className="absolute inset-0 -z-10 bg-page">
+      <section className="hero-section relative isolate grid min-h-[100dvh] place-items-center overflow-hidden">
+        <div className="absolute inset-0 -z-10">
           {hasHeroVideo() ? (
             <video
               className="h-full w-full object-cover"
@@ -76,7 +97,7 @@ export default function OpeningPage() {
                   cycles, so the drift never resolves into a visible loop. */}
               <div
                 aria-hidden="true"
-                className="drift-a absolute inset-[-12%]"
+                className="hero-field-a drift-a absolute inset-[-12%]"
                 style={{
                   background:
                     "radial-gradient(46% 42% at 74% 16%, #FFFDF8 0%, rgba(255,253,248,0) 68%)",
@@ -84,7 +105,7 @@ export default function OpeningPage() {
               />
               <div
                 aria-hidden="true"
-                className="drift-b absolute inset-[-12%]"
+                className="hero-field-b drift-b absolute inset-[-12%]"
                 style={{
                   background:
                     "radial-gradient(52% 46% at 18% 84%, #F1E6D6 0%, rgba(241,230,214,0) 66%)",
@@ -99,11 +120,11 @@ export default function OpeningPage() {
                   <img
                     src={BRANDING_IMAGE}
                     alt="CAREWELL — טיפול אנושי. כל יום."
-                    className="breathe h-full w-full object-contain"
+                    className="hero-art breathe"
                   />
                   <div
                     aria-hidden="true"
-                    className="sheen pointer-events-none absolute inset-y-0 -left-1/3 w-1/3"
+                    className="hero-glare sheen pointer-events-none absolute inset-y-0 -left-1/3 w-1/3"
                     style={{
                       background:
                         "linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,.65) 50%, rgba(255,255,255,0) 100%)",
@@ -118,14 +139,7 @@ export default function OpeningPage() {
               between the hero and the page. */}
           <div
             aria-hidden="true"
-            className="absolute inset-0"
-            style={{
-              background: [
-                "linear-gradient(to bottom, var(--page) 0%, transparent 18%)",
-                "linear-gradient(to top, var(--page) 0%, transparent 20%)",
-                hasHeroVideo() ? "rgba(247,241,232,.42)" : "transparent",
-              ].join(","),
-            }}
+            className={hasHeroVideo() ? "absolute inset-0 bg-page/40" : "hero-fade absolute inset-0"}
           />
         </div>
 
@@ -188,10 +202,15 @@ export default function OpeningPage() {
           label="מעבר במסדרון המחלקה עד לדלת החדר"
         />
       ) : (
-        <CorridorScroll label="מעבר במסדרון המחלקה עד לדלת החדר" />
+        <CorridorScroll
+          label="מעבר במסדרון המחלקה עד לדלת החדר"
+          onArrive={arriveAtDoor}
+        />
       )}
 
-      {/* The handoff: the walk ends facing a door, and the ward opens. */}
+      {/* With motion suppressed the corridor is a single still and never
+          reaches its own end, so the way through has to be a control. */}
+      {calm && (
       <section className="grid min-h-[62vh] place-items-center px-6 text-center">
         <div
           className={[
@@ -216,6 +235,15 @@ export default function OpeningPage() {
           </button>
         </div>
       </section>
+      )}
+
+      {doorway && (
+        <DoorTransition
+          number={null}
+          origin={doorway}
+          onDone={() => router.push("/rooms")}
+        />
+      )}
 
       {/* the cream wash the branding dissolves into on the way to the ward */}
       <div

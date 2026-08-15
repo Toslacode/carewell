@@ -26,6 +26,7 @@ import {
   IconAlert,
   IconCheck,
   IconChevronDown,
+  IconChevronUp,
   IconMic,
   IconPause,
   IconSparkle,
@@ -87,6 +88,8 @@ export function RecordingBar({
   const [partialText, setPartialText] = useState("");
   const [aiEngine, setAiEngine] = useState<ExtractionEngine | null>(null);
   const [aiNote, setAiNote] = useState<string | null>(null);
+  // Folded down to a compact strip so the bar stops covering the record.
+  const [folded, setFolded] = useState(false);
 
   const providerRef = useRef<TranscriptionProvider | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -232,6 +235,9 @@ export function RecordingBar({
     setAiNote(null);
   }, [approveRound, patient.id, teardown]);
 
+  // Folding is a display change only: the timer, the transcript and the AI
+  // keep running behind it, and the record the reader just uncovered keeps
+  // filling in.
   const transcript = [finalText, partialText].filter(Boolean).join(" ");
 
   return (
@@ -239,8 +245,18 @@ export function RecordingBar({
       <section
         aria-label="הקלטת סבב"
         className={cn(
-          "mx-auto max-w-ward rounded-panel border bg-card/95 shadow-bar backdrop-blur-sm",
-          "transition-[border-color,transform] duration-500",
+          // Translucent rather than opaque: the bar sits over the record for
+          // the whole round, and the doctor needs to keep reading the lines
+          // underneath it. The blur keeps the controls legible without the
+          // panel becoming a wall.
+          "rounded-panel border shadow-bar backdrop-blur-xl backdrop-saturate-150",
+          "transition-[border-color,transform,background-color] duration-500",
+          folded
+            // Folded, it is a small control sitting directly on top of body
+            // text, so it firms up — and pins to the inline-start edge, keeping
+            // the mic under the same finger across fold and unfold.
+            ? "me-auto ms-0 w-fit bg-card/90"
+            : "mx-auto max-w-ward bg-card/70 hover:bg-card/90 focus-within:bg-card/90",
           phase === "recording"
             ? "-translate-y-0.5 border-urgent-line"
             : phase === "structuring"
@@ -280,6 +296,40 @@ export function RecordingBar({
           </div>
         )}
 
+        {folded ? (
+          <div className="flex items-center gap-2.5 p-2.5">
+            <MicButton
+              phase={phase}
+              compact
+              onClick={() => {
+                if (phase === "idle" || phase === "failed") void beginRound();
+                else if (phase === "recording") providerRef.current?.pause();
+                else if (phase === "paused") providerRef.current?.resume();
+              }}
+            />
+            <div>
+              <p className="text-[13px] font-semibold text-navy-deep">
+                {stateLabel(phase, modelProgress)}
+              </p>
+              {(phase === "recording" || phase === "paused") && (
+                <p className="tnum text-[12px] text-ink-muted">{formatClock(seconds)}</p>
+              )}
+            </div>
+            {(phase === "recording" || phase === "paused") && (
+              <Button size="sm" onClick={() => void stopRound()}>
+                <IconStop className="h-4 w-4" />
+                סיום
+              </Button>
+            )}
+            {(phase === "review" || isDraft) && (
+              <Button variant="primary" size="sm" onClick={confirmRound}>
+                <IconCheck className="h-4 w-4" />
+                אישור סבב
+              </Button>
+            )}
+            <FoldButton folded onClick={() => setFolded(false)} />
+          </div>
+        ) : (
         <div className="flex flex-col gap-3 p-3.5 sm:flex-row sm:items-center sm:gap-4 sm:p-4">
           {/* mic + state */}
           <div className="flex shrink-0 items-center gap-3">
@@ -403,9 +453,12 @@ export function RecordingBar({
               </>
             )}
           </div>
-        </div>
 
-        {(phase === "review" || isDraft) && (
+          <FoldButton folded={false} onClick={() => setFolded(true)} />
+        </div>
+        )}
+
+        {!folded && (phase === "review" || isDraft) && (
           <p className="flex items-center gap-2 border-t border-line bg-info-bg/40 px-4 py-2.5 text-[13px] text-info sm:px-5">
             <IconSparkle className="h-4 w-4 shrink-0" />
             טיוטת AI — יש לעבור על המידע לפני אישור.
@@ -421,7 +474,36 @@ export function RecordingBar({
 
 /* ------------------------------------------------------------------ pieces */
 
-function MicButton({ phase, onClick }: { phase: Phase; onClick: () => void }) {
+function FoldButton({ folded, onClick }: { folded: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={folded ? "הרחבת סרגל ההקלטה" : "כיווץ סרגל ההקלטה"}
+      title={folded ? "הרחבה" : "כיווץ"}
+      className={cn(
+        "flex h-8 w-8 shrink-0 items-center justify-center self-start rounded-chip border border-line-strong",
+        "bg-card/60 text-ink-muted transition-colors hover:bg-page-deep hover:text-ink sm:self-center",
+      )}
+    >
+      {folded ? (
+        <IconChevronUp className="h-[18px] w-[18px]" />
+      ) : (
+        <IconChevronDown className="h-[18px] w-[18px]" />
+      )}
+    </button>
+  );
+}
+
+function MicButton({
+  phase,
+  onClick,
+  compact,
+}: {
+  phase: Phase;
+  onClick: () => void;
+  compact?: boolean;
+}) {
   const recording = phase === "recording";
   const label =
     phase === "recording"
@@ -438,7 +520,8 @@ function MicButton({ phase, onClick }: { phase: Phase; onClick: () => void }) {
       title={label}
       disabled={phase === "preparing" || phase === "structuring"}
       className={cn(
-        "relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full transition-colors",
+        "relative flex shrink-0 items-center justify-center rounded-full transition-colors",
+        compact ? "h-10 w-10" : "h-14 w-14",
         "disabled:cursor-not-allowed disabled:opacity-60",
         recording
           ? "bg-urgent text-white"
@@ -447,7 +530,7 @@ function MicButton({ phase, onClick }: { phase: Phase; onClick: () => void }) {
             : "bg-navy text-on-navy hover:bg-navy-deep",
       )}
     >
-      <IconMic className="h-6 w-6" />
+      <IconMic className={compact ? "h-5 w-5" : "h-6 w-6"} />
       {recording && (
         <>
           {/* Two rings leaving the button on an offset cycle — the clearest

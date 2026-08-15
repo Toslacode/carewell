@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { WardProvider } from "@/lib/store/ward-store";
+import { PrefsProvider } from "@/lib/store/prefs";
+import { UtilityBar } from "@/components/layout/UtilityBar";
 
 export const metadata: Metadata = {
   title: "CAREWELL — מחלקה פנימית ב׳",
@@ -41,7 +43,12 @@ export default function RootLayout({
         >
           דילוג לתוכן הראשי
         </a>
-        <WardProvider>{children}</WardProvider>
+        <PrefsProvider>
+          <WardProvider>
+            {children}
+            <UtilityBar />
+          </WardProvider>
+        </PrefsProvider>
       </body>
     </html>
   );

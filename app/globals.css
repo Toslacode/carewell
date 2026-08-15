@@ -39,65 +39,114 @@
    text uses --ink-muted (5.2:1 on page, 5.7:1 on card). --ink-decor is BELOW
    4.5:1 by design and is for non-informational marks only — dividers, the
    footer glyph — never for text a doctor has to read.
+
+   Each colour is declared twice on purpose. The `-rgb` triplet is the canonical
+   value and is what tailwind.config.ts maps to, so `bg-card/70` can resolve to
+   rgb(… / .7); Tailwind cannot apply an alpha modifier to a variable holding a
+   hex string, and silently emits an invalid declaration when asked to — which
+   renders as no background at all rather than as an error. The hex-shaped alias
+   beside it is what raw CSS in this file uses. Add a colour to one and it must
+   be added to the other.
 --------------------------------------------------------------------------- */
 
 :root {
   color-scheme: light;
 
   /* grounds */
-  --page: #f7f1e8;
-  --page-deep: #f1e8dc;
-  --card: #fdfbf7;
-  --card-raised: #ffffff;
-  --card-sunken: #f5efe6;
+  --page-rgb: 247 241 232;
+  --page: rgb(var(--page-rgb));
+  --page-deep-rgb: 241 232 220;
+  --page-deep: rgb(var(--page-deep-rgb));
+  --card-rgb: 253 251 247;
+  --card: rgb(var(--card-rgb));
+  --card-raised-rgb: 255 255 255;
+  --card-raised: rgb(var(--card-raised-rgb));
+  --card-sunken-rgb: 245 239 230;
+  --card-sunken: rgb(var(--card-sunken-rgb));
 
   /* brand */
-  --navy: #1b3a5c;
-  --navy-deep: #12293f;
-  --navy-soft: #2f5578;
-  --navy-wash: #eaf0f5;
+  --navy-rgb: 27 58 92;
+  --navy: rgb(var(--navy-rgb));
+  --navy-deep-rgb: 18 41 63;
+  --navy-deep: rgb(var(--navy-deep-rgb));
+  --navy-soft-rgb: 47 85 120;
+  --navy-soft: rgb(var(--navy-soft-rgb));
+  --navy-wash-rgb: 234 240 245;
+  --navy-wash: rgb(var(--navy-wash-rgb));
 
   /* text */
-  --ink: #1c2b3a;
-  --ink-muted: #6b6459;
-  --ink-decor: #a89e8e;
-  --on-navy: #ffffff;
+  --ink-rgb: 28 43 58;
+  --ink: rgb(var(--ink-rgb));
+  --ink-muted-rgb: 107 100 89;
+  --ink-muted: rgb(var(--ink-muted-rgb));
+  --ink-decor-rgb: 168 158 142;
+  --ink-decor: rgb(var(--ink-decor-rgb));
+  --on-navy-rgb: 255 255 255;
+  --on-navy: rgb(var(--on-navy-rgb));
 
   /* structure */
-  --border: #e7dfd3;
-  --border-strong: #d9cfc0;
-  --border-navy: #c3d2df;
+  --border-rgb: 231 223 211;
+  --border: rgb(var(--border-rgb));
+  --border-strong-rgb: 217 207 192;
+  --border-strong: rgb(var(--border-strong-rgb));
+  --border-navy-rgb: 195 210 223;
+  --border-navy: rgb(var(--border-navy-rgb));
 
   /* wood — light modern natural oak, never dark brown, never gold */
-  --oak: #c9a87c;
-  --oak-light: #dcc4a0;
-  --oak-pale: #e8d7bd;
-  --oak-dark: #a8875c;
-  --oak-edge: #94764f;
-  --handle: #3a3a38;
+  --oak-rgb: 201 168 124;
+  --oak: rgb(var(--oak-rgb));
+  --oak-light-rgb: 220 196 160;
+  --oak-light: rgb(var(--oak-light-rgb));
+  --oak-pale-rgb: 232 215 189;
+  --oak-pale: rgb(var(--oak-pale-rgb));
+  --oak-dark-rgb: 168 135 92;
+  --oak-dark: rgb(var(--oak-dark-rgb));
+  --oak-edge-rgb: 148 118 79;
+  --oak-edge: rgb(var(--oak-edge-rgb));
+  --handle-rgb: 58 58 56;
+  --handle: rgb(var(--handle-rgb));
 
   /* semantic status — kept deliberately separate from the brand navy.
      "attention" is a terracotta rather than an amber: at this saturation an
      amber reads as gold, which the design system rules out entirely. */
-  --stable: #3f6b4c;
-  --stable-bg: #e8f0e9;
-  --stable-line: #c7dacb;
+  --stable-rgb: 63 107 76;
+  --stable: rgb(var(--stable-rgb));
+  --stable-bg-rgb: 232 240 233;
+  --stable-bg: rgb(var(--stable-bg-rgb));
+  --stable-line-rgb: 199 218 203;
+  --stable-line: rgb(var(--stable-line-rgb));
 
-  --attention: #9c5230;
-  --attention-bg: #f7e9e2;
-  --attention-line: #e8cdbe;
+  --attention-rgb: 156 82 48;
 
-  --urgent: #993a34;
-  --urgent-bg: #f8e7e5;
-  --urgent-line: #efc9c5;
+  --attention: rgb(var(--attention-rgb));
+  --attention-bg-rgb: 247 233 226;
+  --attention-bg: rgb(var(--attention-bg-rgb));
+  --attention-line-rgb: 232 205 190;
+  --attention-line: rgb(var(--attention-line-rgb));
 
-  --info: #2f5e86;
-  --info-bg: #e6eff6;
-  --info-line: #c6dae9;
+  --urgent-rgb: 153 58 52;
 
-  --neutral: #5f594f;
-  --neutral-bg: #efeae1;
-  --neutral-line: #ded5c8;
+  --urgent: rgb(var(--urgent-rgb));
+  --urgent-bg-rgb: 248 231 229;
+  --urgent-bg: rgb(var(--urgent-bg-rgb));
+  --urgent-line-rgb: 239 201 197;
+  --urgent-line: rgb(var(--urgent-line-rgb));
+
+  --info-rgb: 47 94 134;
+
+  --info: rgb(var(--info-rgb));
+  --info-bg-rgb: 230 239 246;
+  --info-bg: rgb(var(--info-bg-rgb));
+  --info-line-rgb: 198 218 233;
+  --info-line: rgb(var(--info-line-rgb));
+
+  --neutral-rgb: 95 89 79;
+
+  --neutral: rgb(var(--neutral-rgb));
+  --neutral-bg-rgb: 239 234 225;
+  --neutral-bg: rgb(var(--neutral-bg-rgb));
+  --neutral-line-rgb: 222 213 200;
+  --neutral-line: rgb(var(--neutral-line-rgb));
 
   /* elevation — warm-tinted, never neutral gray, so shadows sit in the cream */
   --shadow-sm: 0 1px 2px rgba(90, 74, 52, 0.05);
@@ -317,6 +366,37 @@
   animation-delay: calc(var(--d, 0) * 45ms);
 }
 
+/* The same suppression, reachable from the settings menu for readers whose OS
+   preference says nothing but who still want the ward to hold still. */
+:root[data-calm] *,
+:root[data-calm] *::before,
+:root[data-calm] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+:root[data-calm] .settle {
+  animation: none;
+  background-color: var(--navy-wash);
+  box-shadow: 0 0 0 6px var(--navy-wash);
+}
+:root[data-calm] .reveal,
+:root[data-calm] .reveal.shown,
+:root[data-calm] .pop.shown {
+  animation: none !important;
+  opacity: 1;
+  transform: none;
+}
+:root[data-calm] .drift-a,
+:root[data-calm] .drift-b,
+:root[data-calm] .breathe,
+:root[data-calm] .ring-1,
+:root[data-calm] .ring-2 { animation: none !important; }
+:root[data-calm] .sheen,
+:root[data-calm] .scroll-cue { display: none; }
+:root[data-calm] .scanning::after { animation: none; display: none; }
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -361,6 +441,182 @@
     display: none;
   }
 }
+
+/* ------------------------------------------------------------ night ------*/
+
+/* Night mode. A ward workstation at 03:00 is a dark room, and the daytime cream
+   is a light source in it. The warm identity survives: the grounds stay
+   brown-leaning rather than blue-grey, the oak stays oak, and the navy inverts
+   its role — a pale blue that carries text and takes dark ink on its buttons,
+   because the daytime navy is unreadable on a dark card. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --page-rgb: 20 22 26;
+
+  --page: rgb(var(--page-rgb));
+  --page-deep-rgb: 14 16 19;
+  --page-deep: rgb(var(--page-deep-rgb));
+  --card-rgb: 27 31 37;
+  --card: rgb(var(--card-rgb));
+  --card-raised-rgb: 34 39 48;
+  --card-raised: rgb(var(--card-raised-rgb));
+  --card-sunken-rgb: 23 27 32;
+  --card-sunken: rgb(var(--card-sunken-rgb));
+
+  --navy-rgb: 125 176 224;
+
+  --navy: rgb(var(--navy-rgb));
+  --navy-deep-rgb: 166 203 235;
+  --navy-deep: rgb(var(--navy-deep-rgb));
+  --navy-soft-rgb: 107 156 201;
+  --navy-soft: rgb(var(--navy-soft-rgb));
+  --navy-wash-rgb: 29 42 54;
+  --navy-wash: rgb(var(--navy-wash-rgb));
+  --on-navy-rgb: 13 17 22;
+  --on-navy: rgb(var(--on-navy-rgb));
+
+  --ink-rgb: 233 229 221;
+
+  --ink: rgb(var(--ink-rgb));
+  --ink-muted-rgb: 168 160 148;
+  --ink-muted: rgb(var(--ink-muted-rgb));
+  --ink-decor-rgb: 111 104 92;
+  --ink-decor: rgb(var(--ink-decor-rgb));
+
+  --border-rgb: 43 48 56;
+
+  --border: rgb(var(--border-rgb));
+  --border-strong-rgb: 60 67 78;
+  --border-strong: rgb(var(--border-strong-rgb));
+  --border-navy-rgb: 51 85 111;
+  --border-navy: rgb(var(--border-navy-rgb));
+
+  --oak-rgb: 184 151 110;
+
+  --oak: rgb(var(--oak-rgb));
+  --oak-light-rgb: 203 174 135;
+  --oak-light: rgb(var(--oak-light-rgb));
+  --oak-pale-rgb: 217 195 163;
+  --oak-pale: rgb(var(--oak-pale-rgb));
+  --oak-dark-rgb: 151 120 80;
+  --oak-dark: rgb(var(--oak-dark-rgb));
+  --oak-edge-rgb: 111 88 55;
+  --oak-edge: rgb(var(--oak-edge-rgb));
+  --handle-rgb: 34 34 31;
+  --handle: rgb(var(--handle-rgb));
+
+  --stable-rgb: 130 196 147;
+
+  --stable: rgb(var(--stable-rgb));
+  --stable-bg-rgb: 22 40 28;
+  --stable-bg: rgb(var(--stable-bg-rgb));
+  --stable-line-rgb: 44 70 52;
+  --stable-line: rgb(var(--stable-line-rgb));
+
+  --attention-rgb: 227 156 112;
+
+  --attention: rgb(var(--attention-rgb));
+  --attention-bg-rgb: 42 29 21;
+  --attention-bg: rgb(var(--attention-bg-rgb));
+  --attention-line-rgb: 73 49 34;
+  --attention-line: rgb(var(--attention-line-rgb));
+
+  --urgent-rgb: 240 144 138;
+
+  --urgent: rgb(var(--urgent-rgb));
+  --urgent-bg-rgb: 44 25 23;
+  --urgent-bg: rgb(var(--urgent-bg-rgb));
+  --urgent-line-rgb: 77 41 37;
+  --urgent-line: rgb(var(--urgent-line-rgb));
+
+  --info-rgb: 141 186 224;
+
+  --info: rgb(var(--info-rgb));
+  --info-bg-rgb: 22 35 46;
+  --info-bg: rgb(var(--info-bg-rgb));
+  --info-line-rgb: 42 64 85;
+  --info-line: rgb(var(--info-line-rgb));
+
+  --neutral-rgb: 179 171 157;
+
+  --neutral: rgb(var(--neutral-rgb));
+  --neutral-bg-rgb: 31 34 41;
+  --neutral-bg: rgb(var(--neutral-bg-rgb));
+  --neutral-line-rgb: 52 58 68;
+  --neutral-line: rgb(var(--neutral-line-rgb));
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.45), 0 6px 16px -8px rgba(0, 0, 0, 0.55);
+  --shadow-lift: 0 2px 6px rgba(0, 0, 0, 0.5), 0 16px 32px -12px rgba(0, 0, 0, 0.6);
+  --shadow-bar: 0 -1px 3px rgba(0, 0, 0, 0.4), 0 -12px 32px -16px rgba(0, 0, 0, 0.6);
+}
+
+/* The corridor at night: the wall goes to shadow, the doorway keeps its warm
+   spill, and the room behind the door is still the lit thing in the frame. */
+:root[data-theme="dark"] .door-wall { background: linear-gradient(180deg, #23262b 0%, #191c21 100%); }
+:root[data-theme="dark"] .door-downlight { opacity: 0.5; }
+:root[data-theme="dark"] .door-rail { background: #343840; }
+:root[data-theme="dark"] .door-plaque { border-color: #3a3f47; background: #262a31; }
+:root[data-theme="dark"] .door-plaque-in { border-color: #444952; }
+:root[data-theme="dark"] .door-frame { background: #2a2d33; box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.5); }
+:root[data-theme="dark"] .door-fixture { background: #fff4dd; box-shadow: 0 0 12px 4px rgba(255, 238, 200, 0.55); }
+:root[data-theme="dark"] .door-room { background: linear-gradient(180deg, #fdf6e8 0%, #f0e2c9 55%, #d9c6a4 100%); }
+:root[data-theme="dark"] .door-slab { filter: brightness(0.86); }
+:root[data-theme="dark"] .door-flight { background: var(--page); }
+
+/* The branding artwork is a daylight image. At night it is dimmed and its edges
+   dissolved further, so it reads as a lit sign at the end of a dark corridor
+   rather than a window someone left open. */
+:root[data-theme="dark"] .hero-section { --hero-ground: #14161a; }
+:root[data-theme="dark"] .hero-art {
+  filter: brightness(0.44) saturate(0.85) contrast(1.05);
+  -webkit-mask-image: radial-gradient(105% 95% at 50% 46%, #000 34%, transparent 74%);
+  mask-image: radial-gradient(105% 95% at 50% 46%, #000 34%, transparent 74%);
+}
+:root[data-theme="dark"] .hero-field-a {
+  background: radial-gradient(46% 42% at 74% 16%, #22262d 0%, rgba(34, 38, 45, 0) 68%);
+}
+:root[data-theme="dark"] .hero-field-b {
+  background: radial-gradient(52% 46% at 18% 84%, #1c1f24 0%, rgba(28, 31, 36, 0) 66%);
+}
+:root[data-theme="dark"] .hero-glare {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.14) 50%, rgba(255, 255, 255, 0) 100%);
+}
+:root[data-theme="dark"] .scrim { background: rgba(0, 0, 0, 0.5); }
+
+/* ---------------------------------------------------------------------------
+   The opening surface.
+
+   The opening is one continuous field, not a picture pasted on a page. The
+   ground is painted in the artwork's own cream (#faf1eb, sampled from its
+   corners), the artwork covers rather than letterboxes so there is no seam, and
+   its edges are dissolved with a radial mask — what the eye sees is a cream
+   field that happens to carry the mark, fading into the page at the boundary.
+--------------------------------------------------------------------------- */
+
+.hero-section {
+  --hero-ground-rgb: 250 241 235;
+  --hero-ground: rgb(var(--hero-ground-rgb));
+  background: var(--hero-ground);
+}
+
+.hero-art {
+  height: 100%;
+  width: 100%;
+  object-fit: cover;
+  display: block;
+  transform: scale(1.06);
+  transform-origin: center 46%;
+  -webkit-mask-image: radial-gradient(125% 115% at 50% 46%, #000 52%, transparent 86%);
+  mask-image: radial-gradient(125% 115% at 50% 46%, #000 52%, transparent 86%);
+}
+
+.hero-fade {
+  background: linear-gradient(to bottom, var(--hero-ground) 0%, transparent 16%),
+    linear-gradient(to top, var(--page) 0%, rgba(250, 241, 235, 0) 26%);
+}
+
 
 /* Utility: hide visually, keep for screen readers */
 .sr-only {

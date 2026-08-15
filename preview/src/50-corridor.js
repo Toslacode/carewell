@@ -27,7 +27,11 @@ const DOOR_DEPTH = 1.15;
  *  room-selection screen opens. */
 const WALK = 25.1;
 
-function mountCorridor(section) {
+/** The walk is finished at this point; the door ahead opens on its own. Short of
+ *  1 so it fires while the reader is still moving, not after they hit the stop. */
+const ARRIVE_AT = 0.975;
+
+function mountCorridor(section, onArrive) {
   const canvas = section.querySelector("canvas");
   const ctx = canvas.getContext("2d");
   if (!ctx) return () => {};
@@ -36,6 +40,10 @@ function mountCorridor(section) {
   let shown = 0;
   let running = false;
   let raf = 0;
+  let arrived = false;
+  /** Where the far door sits on screen in CSS pixels, so the DOM door that
+   *  opens at the end can be placed exactly over the drawn one. */
+  let doorRect = null;
 
   function draw(t) {
     const W = canvas.width;
@@ -95,6 +103,15 @@ function mountCorridor(section) {
     slab.addColorStop(0.55, "#C9A87C");
     slab.addColorStop(1, "#B99669");
     quad([[dL, dT], [dR, dT], [dR, eB], [dL, eB]], slab);
+
+    // Recorded in CSS pixels for the hand-off to the DOM door.
+    const scale = canvas.clientWidth / W;
+    doorRect = {
+      left: dL * scale,
+      top: dT * scale,
+      width: (dR - dL) * scale,
+      height: (eB - dT) * scale,
+    };
 
     // handle, only once it is large enough to read
     const handleW = (dR - dL) * 0.13;
@@ -227,6 +244,26 @@ function mountCorridor(section) {
     shown += (target - shown) * 0.12;
     if (Math.abs(target - shown) < 0.0015) shown = target;
     draw(shown);
+
+    // Reaching the end of the corridor IS the transition. The reader walked up
+    // to the door; the door opens. Pressing a button to do what the walk was
+    // already doing would break the illusion the whole sequence buys.
+    if (!arrived && target >= ARRIVE_AT && onArrive) {
+      arrived = true;
+      running = false;
+      cancelAnimationFrame(raf);
+      const rect = canvas.getBoundingClientRect();
+      onArrive(
+        doorRect && {
+          left: rect.left + doorRect.left,
+          top: rect.top + doorRect.top,
+          width: doorRect.width,
+          height: doorRect.height,
+        },
+      );
+      return;
+    }
+
     if (running) raf = requestAnimationFrame(tick);
   }
 

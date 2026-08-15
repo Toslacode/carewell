@@ -57,6 +57,18 @@ const I = {
   alert: (c) => svg('<path d="M12 4.5 21 19.5H3Z"/><path d="M12 10v4.2M12 17.2v.1"/>', c),
   door: (c) =>
     svg('<path d="M6.5 20.5V4.8a1.3 1.3 0 0 1 1.1-1.3l7-1a1.3 1.3 0 0 1 1.4 1.3v16.7"/><path d="M4.5 20.5h15M13.5 12.2v1.6"/>', c),
+  gear: (c) =>
+    svg('<circle cx="12" cy="12" r="3.2"/><path d="M19.4 14.5a1.6 1.6 0 0 0 .32 1.77l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.6 1.6 0 0 0-1.77-.32 1.6 1.6 0 0 0-1 1.47V20a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1.05-1.47 1.6 1.6 0 0 0-1.77.32l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.6 1.6 0 0 0 .32-1.77 1.6 1.6 0 0 0-1.47-1H4a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.47-1.05 1.6 1.6 0 0 0-.32-1.77l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.6 1.6 0 0 0 1.77.32H10a1.6 1.6 0 0 0 1-1.47V4a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.47 1.6 1.6 0 0 0 1.77-.32l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.6 1.6 0 0 0-.32 1.77V10a1.6 1.6 0 0 0 1.47 1H20a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.47 1Z"/>', c),
+  moon: (c) => svg('<path d="M20 14.2A8.2 8.2 0 0 1 9.8 4 8.4 8.4 0 1 0 20 14.2Z"/>', c),
+  sun: (c) =>
+    svg('<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.2 5.2l1.4 1.4M17.4 17.4l1.4 1.4M18.8 5.2l-1.4 1.4M6.6 17.4l-1.4 1.4"/>', c),
+  logout: (c) => svg('<path d="M14.5 8.5V6a1.5 1.5 0 0 0-1.5-1.5H6A1.5 1.5 0 0 0 4.5 6v12A1.5 1.5 0 0 0 6 19.5h7a1.5 1.5 0 0 0 1.5-1.5v-2.5"/><path d="M9.5 12h10M16.5 8.5 20 12l-3.5 3.5"/>', c),
+  motion: (c) => svg('<path d="M4 12h4l2-5 3 10 2-5h5"/>', c),
+  assistant: (c) =>
+    svg('<path d="M4.5 6.5A2 2 0 0 1 6.5 4.5h11a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H12l-4.5 3.5V15.5H6.5a2 2 0 0 1-2-2Z"/><path d="M9 9.5h6M9 12.5h3.5"/>', c),
+  close: (c) => svg('<path d="M6 6l12 12M18 6L6 18"/>', c),
+  send: (c) => svg('<path d="M20 4 3.5 11l6.5 2.2L12.2 20Z"/><path d="M10 13.2 20 4"/>', c),
+  chevronUp: (c) => svg('<path d="M6 14.5l6-6 6 6"/>', c),
   wheat: (c) =>
     svg('<path d="M12 21V8"/><path d="M12 8c0-2 1.2-3.6 3-4.5.4 2.2-.6 4-3 4.5ZM12 8c0-2-1.2-3.6-3-4.5-.4 2.2.6 4 3 4.5Z"/><path d="M12 13c0-1.8 1.1-3.2 2.7-4 .4 2-.5 3.6-2.7 4ZM12 13c0-1.8-1.1-3.2-2.7-4-.4 2 .5 3.6 2.7 4Z"/><path d="M12 17.5c0-1.6 1-2.9 2.4-3.6.3 1.8-.5 3.2-2.4 3.6ZM12 17.5c0-1.6-1-2.9-2.4-3.6-.3 1.8.5 3.2 2.4 3.6Z"/>', c),
 };
@@ -98,7 +110,6 @@ function header(opts) {
   return `<header class="app-header"><div class="bar ward">
     <button class="lockup-btn" data-go="rooms" style="border:0;background:none;padding:0;cursor:pointer" title="חזרה לבחירת חדר">${lockup()}<span class="sr-only">חזרה לבחירת חדר</span></button>
     <div class="mid"><p class="ward-name">מחלקה פנימית ב׳</p>${mid}</div>
-    <span class="staff">${I.user(iconStyle(18))}צוות${I.chevronDown(iconStyle(16))}</span>
   </div></header>`;
 }
 
@@ -139,7 +150,7 @@ function doorSlab(number, opts) {
 function armReveals(root) {
   const nodes = root.querySelectorAll(".reveal:not(.shown)");
   if (!nodes.length) return;
-  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  if (calm()) {
     nodes.forEach((n) => n.classList.add("shown"));
     return;
   }

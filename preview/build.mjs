@@ -18,11 +18,12 @@ const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, "..");
 const src = (name) => readFile(join(here, "src", name), "utf8");
 
-const [shell, style, data, extract, store, ui, corridor, views, recorder, appjs] = await Promise.all([
+const [shell, style, data, extract, assistant, store, ui, corridor, views, recorder, appjs] = await Promise.all([
   src("shell.html"),
   src("00-style.css"),
   src("10-data.js"),
   src("20-extract.js"),
+  src("25-assistant.js"),
   src("30-store.js"),
   src("40-ui.js"),
   src("50-corridor.js"),
@@ -47,6 +48,7 @@ const out = shell
   .replace("__FONT_LATIN__", await fontUri("heebo-latin-wght-normal.woff2"))
   .replace("__DATA__", () => data)
   .replace("__EXTRACT__", () => extract)
+  .replace("__ASSISTANT__", () => assistant)
   .replace("__STORE__", () => store)
   .replace("__UI__", () => ui)
   .replace("__CORRIDOR__", () => corridor)

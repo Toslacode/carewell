@@ -32,6 +32,8 @@ const rec = {
   aiNote: null,
   aiEngine: null,
   provider: null,
+  /** Folded down to a compact strip so it stops covering the record. */
+  folded: false,
   clock: null,
   debounce: null,
   waveRaf: 0,
@@ -354,6 +356,35 @@ function recordingBar(p) {
   const engine = engines.find((e) => e.id === rec.engineId);
   const transcript = [rec.finalText, rec.partialText].filter(Boolean).join(" ");
 
+  // Folded: the bar shrinks to the mic, the state and the way back out, and
+  // gives the record underneath it back to the reader. Nothing about the round
+  // pauses — the timer runs, the transcript keeps accumulating, and the AI
+  // keeps filling the sections the reader can now see.
+  if (rec.folded) {
+    return `<div class="rec-wrap" id="rec-wrap">
+      <section class="rec folded ${phase}" aria-label="הקלטת סבב — מכווץ">
+        <div class="strip">
+          <button class="mic${phase === "recording" ? " on" : phase === "paused" ? " paused" : ""}"
+            data-rec="${phase === "recording" ? "pause" : phase === "paused" ? "resume" : "begin"}"
+            ${phase === "preparing" || phase === "structuring" ? "disabled" : ""}
+            aria-label="${phase === "recording" ? "השהיית ההקלטה" : phase === "paused" ? "המשך ההקלטה" : "התחלת סבב מוקלט"}">
+            ${I.mic(iconStyle(20))}
+            ${phase === "recording" ? `<span class="ring ring-1" aria-hidden="true"></span><span class="ring ring-2" aria-hidden="true"></span>` : ""}
+          </button>
+          <div class="state">
+            <p class="t">${esc(stateLabel(phase))}</p>
+            ${phase === "recording" || phase === "paused" ? `<p class="s tnum">${formatClock(rec.seconds)}</p>` : ""}
+          </div>
+          ${phase === "recording" || phase === "paused" ? `<button class="btn quiet sm" data-rec="stop">${I.stop(iconStyle(16))}סיום</button>` : ""}
+          ${phase === "review" || isDraft ? `<button class="btn primary sm" data-rec="approve">${I.check(iconStyle(16))}אישור סבב</button>` : ""}
+          <button class="fold-btn" data-rec="unfold" aria-label="הרחבת סרגל ההקלטה" title="הרחבה">
+            ${I.chevronUp(iconStyle(18))}
+          </button>
+        </div>
+      </section>
+    </div>`;
+  }
+
   const notices =
     rec.error || rec.aiNote
       ? `<div class="notices">
@@ -437,6 +468,10 @@ function recordingBar(p) {
         </div>
 
         <div class="controls">${controls}</div>
+
+        <button class="fold-btn" data-rec="fold" aria-label="כיווץ סרגל ההקלטה" title="כיווץ">
+          ${I.chevronDown(iconStyle(18))}
+        </button>
       </div>
 
       ${

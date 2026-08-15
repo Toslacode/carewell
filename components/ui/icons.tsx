@@ -194,3 +194,63 @@ export const IconWheat = (p: P) => (
     <path d="M12 17.5c0-1.6 1-2.9 2.4-3.6.3 1.8-.5 3.2-2.4 3.6ZM12 17.5c0-1.6-1-2.9-2.4-3.6-.3 1.8.5 3.2 2.4 3.6Z" />
   </Svg>
 );
+
+export const IconSettings = (p: P) => (
+  <Svg {...p}>
+    <circle cx="12" cy="12" r="3.2" />
+    <path d="M19.4 14.5a1.6 1.6 0 0 0 .32 1.77l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.6 1.6 0 0 0-1.77-.32 1.6 1.6 0 0 0-1 1.47V20a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1.05-1.47 1.6 1.6 0 0 0-1.77.32l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.6 1.6 0 0 0 .32-1.77 1.6 1.6 0 0 0-1.47-1H4a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.47-1.05 1.6 1.6 0 0 0-.32-1.77l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.6 1.6 0 0 0 1.77.32H10a1.6 1.6 0 0 0 1-1.47V4a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.47 1.6 1.6 0 0 0 1.77-.32l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.6 1.6 0 0 0-.32 1.77V10a1.6 1.6 0 0 0 1.47 1H20a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.47 1Z" />
+  </Svg>
+);
+
+export const IconMoon = (p: P) => (
+  <Svg {...p}>
+    <path d="M20 14.2A8.2 8.2 0 0 1 9.8 4 8.4 8.4 0 1 0 20 14.2Z" />
+  </Svg>
+);
+
+export const IconSun = (p: P) => (
+  <Svg {...p}>
+    <circle cx="12" cy="12" r="4" />
+    <path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.2 5.2l1.4 1.4M17.4 17.4l1.4 1.4M18.8 5.2l-1.4 1.4M6.6 17.4l-1.4 1.4" />
+  </Svg>
+);
+
+export const IconLogout = (p: P) => (
+  <Svg {...p}>
+    <path d="M14.5 8.5V6a1.5 1.5 0 0 0-1.5-1.5H6A1.5 1.5 0 0 0 4.5 6v12A1.5 1.5 0 0 0 6 19.5h7a1.5 1.5 0 0 0 1.5-1.5v-2.5" />
+    <path d="M9.5 12h10M16.5 8.5 20 12l-3.5 3.5" />
+  </Svg>
+);
+
+/** Waveform, used for the motion switch — a line that stops moving. */
+export const IconWaveform = (p: P) => (
+  <Svg {...p}>
+    <path d="M4 12h4l2-5 3 10 2-5h5" />
+  </Svg>
+);
+
+export const IconMessage = (p: P) => (
+  <Svg {...p}>
+    <path d="M4.5 6.5A2 2 0 0 1 6.5 4.5h11a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H12l-4.5 3.5V15.5H6.5a2 2 0 0 1-2-2Z" />
+    <path d="M9 9.5h6M9 12.5h3.5" />
+  </Svg>
+);
+
+export const IconClose = (p: P) => (
+  <Svg {...p}>
+    <path d="M6 6l12 12M18 6L6 18" />
+  </Svg>
+);
+
+export const IconSend = (p: P) => (
+  <Svg {...p}>
+    <path d="M20 4 3.5 11l6.5 2.2L12.2 20Z" />
+    <path d="M10 13.2 20 4" />
+  </Svg>
+);
+
+export const IconChevronUp = (p: P) => (
+  <Svg {...p}>
+    <path d="M6 14.5l6-6 6 6" />
+  </Svg>
+);

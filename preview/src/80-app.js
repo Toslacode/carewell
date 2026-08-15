@@ -50,6 +50,30 @@ function cancelEditor() {
 }
 
 document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    if (state.assistantOpen) {
+      state.assistantOpen = false;
+      refreshAssistant();
+      return;
+    }
+    if (state.settingsOpen) {
+      state.settingsOpen = false;
+      refreshUtility();
+      return;
+    }
+  }
+
+  const ask = e.target.closest && e.target.closest("#assistant-input");
+  if (ask) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const value = ask.value;
+      ask.value = "";
+      submitQuestion(value);
+    }
+    return;
+  }
+
   const input = e.target.closest && e.target.closest('input[data-editor="1"]');
   if (!input) return;
   if (e.key === "Enter") {
@@ -59,6 +83,51 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
     e.preventDefault();
     cancelEditor();
+  }
+});
+
+/**
+ * Double-click to edit.
+ *
+ * The pencil is the discoverable path; this is the fast one. A doctor correcting
+ * a mis-heard creatinine mid-round should be able to hit the number itself
+ * rather than aim for a 15px icon that only appears on hover.
+ */
+document.addEventListener("dblclick", (e) => {
+  const p = getPatient(state.patientId);
+  if (!p) return;
+
+  const line = e.target.closest && e.target.closest(".item");
+  if (line) {
+    const row = line.querySelector("[data-edit-item]");
+    if (row) {
+      state.editing = {
+        kind: "item",
+        path: row.getAttribute("data-path"),
+        id: row.getAttribute("data-edit-item"),
+      };
+      refreshRecord();
+      return;
+    }
+  }
+
+  const vital = e.target.closest && e.target.closest(".vital");
+  if (vital) {
+    const key = vital.querySelector("[data-edit-vital]");
+    if (key) {
+      state.editing = { kind: "vital", key: key.getAttribute("data-edit-vital") };
+      refreshRecord();
+      return;
+    }
+  }
+
+  const task = e.target.closest && e.target.closest(".task-row .title");
+  if (task) {
+    const row = task.closest("li").querySelector("[data-edit-task]");
+    if (row) {
+      state.editing = { kind: "task", id: row.getAttribute("data-edit-task") };
+      refreshRecord();
+    }
   }
 });
 
@@ -81,6 +150,77 @@ document.addEventListener("click", (e) => {
     const node = t.closest(`[${attr}]`);
     return node ? node.getAttribute(attr) : null;
   };
+
+  /* --------------------------------------------------- settings + assistant */
+  const settings = hit("data-settings");
+  if (settings) {
+    if (settings === "toggle") state.settingsOpen = !state.settingsOpen;
+    if (settings === "restart") {
+      // A demo that cannot be put back is a demo you only get to run once.
+      const fresh = buildDemoWard();
+      ward.rooms = fresh.rooms;
+      ward.patients = fresh.patients;
+      state.settingsOpen = false;
+      state.chat = [];
+      cancelRound();
+      go("rooms");
+      return;
+    }
+    if (settings === "logout") {
+      state.settingsOpen = false;
+      state.assistantOpen = false;
+      cancelRound();
+      go("open");
+      return;
+    }
+    refreshUtility();
+    return;
+  }
+
+  const pref = hit("data-pref");
+  if (pref) {
+    if (pref === "theme") prefs.theme = prefs.theme === "dark" ? "light" : "dark";
+    if (pref === "motion") prefs.calmMotion = !prefs.calmMotion;
+    applyPrefs();
+    refreshUtility();
+    return;
+  }
+
+  if (state.settingsOpen && !t.closest(".utility")) {
+    state.settingsOpen = false;
+    refreshUtility();
+  }
+
+  const assistant = hit("data-assistant");
+  if (assistant) {
+    if (assistant === "open") {
+      state.assistantOpen = true;
+      state.settingsOpen = false;
+      refreshUtility();
+      refreshAssistant();
+    } else if (assistant === "close") {
+      state.assistantOpen = false;
+      refreshAssistant();
+    } else if (assistant === "send") {
+      const input = document.getElementById("assistant-input");
+      if (input) {
+        const value = input.value;
+        input.value = "";
+        submitQuestion(value);
+      }
+    }
+    return;
+  }
+
+  const suggested = hit("data-ask");
+  if (suggested) {
+    submitQuestion(suggested);
+    return;
+  }
+
+  if (t.closest("[data-close-assistant]")) {
+    state.assistantOpen = false;
+  }
 
   /* ------------------------------------------------------------ navigation */
   if (t.closest("[data-enter]")) {
@@ -244,7 +384,10 @@ document.addEventListener("click", (e) => {
     else if (action === "stop") void stopRound();
     else if (action === "cancel") cancelRound();
     else if (action === "approve") confirmRound();
-    else if (action === "engines") {
+    else if (action === "fold" || action === "unfold") {
+      rec.folded = action === "fold";
+      refreshRecorder();
+    } else if (action === "engines") {
       state.enginePickerOpen = !state.enginePickerOpen;
       refreshRecorder();
     }
@@ -268,4 +411,5 @@ document.addEventListener("click", (e) => {
 document.documentElement.setAttribute("dir", "rtl");
 document.documentElement.setAttribute("lang", "he");
 
+loadPrefs();
 render();

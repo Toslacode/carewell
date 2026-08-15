@@ -20,7 +20,8 @@ export function DoorSlab({
   dim = false,
   className,
 }: {
-  number: number;
+  /** The room number on the slab. Empty for the corridor's own end door. */
+  number: number | string;
   /** Swings the slab on its hinge — used by the entry transition. */
   open?: boolean;
   dim?: boolean;
@@ -28,15 +29,15 @@ export function DoorSlab({
 }) {
   return (
     <div
-      className={cn("relative aspect-[4/5] w-full overflow-hidden", className)}
+      className={cn("door relative aspect-[4/5] w-full overflow-hidden", className)}
       style={{ perspective: "900px" }}
     >
       {/* wall */}
-      <div className="absolute inset-0 bg-[linear-gradient(180deg,#FCFAF6_0%,#F4EFE7_100%)]" />
+      <div className="door-wall absolute inset-0 bg-[linear-gradient(180deg,#FCFAF6_0%,#F4EFE7_100%)]" />
 
       {/* downlight wash on the wall above the frame */}
       <div
-        className="absolute inset-x-0 top-0 h-[38%] opacity-70"
+        className="door-downlight absolute inset-x-0 top-0 h-[38%] opacity-70"
         style={{
           background:
             "radial-gradient(60% 100% at 50% 0%, rgba(255,246,228,.95) 0%, rgba(255,246,228,0) 70%)",
@@ -45,24 +46,24 @@ export function DoorSlab({
 
       {/* bumper rails */}
       <div className="absolute inset-x-0 bottom-[16%] flex justify-between px-[3%]">
-        <span className="h-[7px] w-[22%] rounded-[2px] bg-[#CFC6B8]" />
-        <span className="h-[7px] w-[22%] rounded-[2px] bg-[#CFC6B8]" />
+        <span className="door-rail h-[7px] w-[22%] rounded-[2px] bg-[#CFC6B8]" />
+        <span className="door-rail h-[7px] w-[22%] rounded-[2px] bg-[#CFC6B8]" />
       </div>
 
       {/* signage plaque, inline-start side */}
-      <div className="absolute start-[5%] top-[26%] h-[13%] w-[11%] rounded-[3px] border border-[#E2D9CB] bg-[#FBF7F0] shadow-[0_1px_1px_rgba(90,74,52,.07)]">
-        <span className="absolute inset-[22%] rounded-[1px] border border-[#DDD3C3]" />
+      <div className="door-plaque absolute start-[5%] top-[26%] h-[13%] w-[11%] rounded-[3px] border border-[#E2D9CB] bg-[#FBF7F0] shadow-[0_1px_1px_rgba(90,74,52,.07)]">
+        <span className="door-plaque-in absolute inset-[22%] rounded-[1px] border border-[#DDD3C3]" />
       </div>
 
       {/* recessed frame */}
-      <div className="absolute inset-x-[16%] top-[8%] bottom-0 rounded-t-[6px] bg-[#E4DACA] shadow-[inset_0_2px_5px_rgba(90,74,52,.16)]">
+      <div className="door-frame absolute inset-x-[16%] top-[8%] bottom-0 rounded-t-[6px] bg-[#E4DACA] shadow-[inset_0_2px_5px_rgba(90,74,52,.16)]">
         {/* ceiling downlight fixture */}
-        <span className="absolute left-1/2 top-[1.5%] h-[2.6%] w-[34%] -translate-x-1/2 rounded-full bg-[#FFF8E8] shadow-[0_0_10px_3px_rgba(255,240,205,.85)]" />
+        <span className="door-fixture absolute left-1/2 top-[1.5%] h-[2.6%] w-[34%] -translate-x-1/2 rounded-full bg-[#FFF8E8] shadow-[0_0_10px_3px_rgba(255,240,205,.85)]" />
 
         {/* the slab */}
         <div
           className={cn(
-            "absolute inset-x-[6%] bottom-0 top-[6%] rounded-t-[4px]",
+            "door-slab absolute inset-x-[6%] bottom-0 top-[6%] rounded-t-[4px]",
             "transition-transform duration-[620ms] ease-[cubic-bezier(.32,.72,.32,1)]",
           )}
           style={{
@@ -95,7 +96,7 @@ export function DoorSlab({
 
         {/* the lit room revealed behind the slab as it swings */}
         <div
-          className="absolute inset-x-[6%] bottom-0 top-[6%] -z-10 rounded-t-[4px]"
+          className="door-room absolute inset-x-[6%] bottom-0 top-[6%] -z-10 rounded-t-[4px]"
           style={{
             background:
               "linear-gradient(180deg,#FFFDF8 0%,#FBF4E8 55%,#F3E9D8 100%)",

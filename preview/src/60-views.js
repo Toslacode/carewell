@@ -21,7 +21,42 @@ const state = {
    *  change while the reader is already there — re-arming an observer would
    *  leave anything scrolled past stuck at opacity 0. */
   animate: true,
+  settingsOpen: false,
+  assistantOpen: false,
+  /** Answered questions, newest last. Kept in memory only. */
+  chat: [],
 };
+
+/* ------------------------------------------------------------ preferences */
+
+const PREF_KEY = "carewell.prefs.v1";
+
+const prefs = { theme: "light", calmMotion: false };
+
+function loadPrefs() {
+  try {
+    Object.assign(prefs, JSON.parse(localStorage.getItem(PREF_KEY) || "{}"));
+  } catch {
+    // A sandboxed frame may refuse storage entirely; defaults are fine.
+  }
+  applyPrefs();
+}
+
+function applyPrefs() {
+  document.documentElement.setAttribute("data-theme", prefs.theme);
+  document.documentElement.toggleAttribute("data-calm", prefs.calmMotion);
+  try {
+    localStorage.setItem(PREF_KEY, JSON.stringify(prefs));
+  } catch {
+    // Preference is still applied for this session.
+  }
+}
+
+/** True when motion should be suppressed — either the OS asked, or the reader
+ *  did through the settings menu. */
+function calm() {
+  return prefs.calmMotion || window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
 
 const app = document.getElementById("app");
 let disposeCorridor = null;
@@ -54,18 +89,160 @@ function render() {
             ? viewPatient()
             : viewTasks();
 
-  app.innerHTML = html;
+  app.innerHTML = html + utilityBar() + settingsMenuHost() + assistantPanel();
   armReveals(app);
   state.animate = false;
 
   if (state.screen === "open") {
     const section = app.querySelector(".corridor");
-    if (section) disposeCorridor = mountCorridor(section);
+    if (section) disposeCorridor = mountCorridor(section, arriveAtDoor);
   }
   if (state.screen === "patient") {
     mountRecorder();
     focusEditor();
   }
+}
+
+/* ----------------------------------------------------- utility + settings -*/
+
+function utilityBar() {
+  return `<div class="utility">
+    <button class="u-btn" data-assistant="open" aria-label="עוזר המחלקה">
+      ${I.assistant(iconStyle(18))}<span>עוזר המחלקה</span>
+    </button>
+    <span class="sep" aria-hidden="true"></span>
+    <button class="u-btn icon-only${state.settingsOpen ? " on" : ""}" data-settings="toggle"
+      aria-label="הגדרות" aria-expanded="${state.settingsOpen}" title="הגדרות">
+      ${I.gear(iconStyle(18))}
+    </button>
+    ${state.settingsOpen ? settingsMenu() : ""}
+  </div>`;
+}
+
+function settingsMenuHost() {
+  return "";
+}
+
+function settingsMenu() {
+  const night = prefs.theme === "dark";
+  return `<div class="menu" role="menu">
+    <div class="group">
+      <p class="label">תצוגה</p>
+      <button class="row" role="menuitemcheckbox" aria-checked="${night}" data-pref="theme">
+        ${night ? I.moon(iconStyle(18)) : I.sun(iconStyle(18))}
+        <span class="grow">מצב לילה<span class="hint">${night ? "פעיל — רקע כהה לסבב לילה" : "כבוי — תצוגת יום"}</span></span>
+        <span class="switch${night ? " on" : ""}" aria-hidden="true"></span>
+      </button>
+      <button class="row" role="menuitemcheckbox" aria-checked="${prefs.calmMotion}" data-pref="motion">
+        ${I.motion(iconStyle(18))}
+        <span class="grow">הפחתת תנועה<span class="hint">${prefs.calmMotion ? "אנימציות מושבתות" : "אנימציות פעילות"}</span></span>
+        <span class="switch${prefs.calmMotion ? " on" : ""}" aria-hidden="true"></span>
+      </button>
+    </div>
+    <div class="group">
+      <p class="label">חשבון</p>
+      <button class="row" role="menuitem" data-settings="restart">
+        ${I.back(iconStyle(18))}
+        <span class="grow">איפוס נתוני ההדגמה<span class="hint">מחזיר את המחלקה למצב ההתחלתי</span></span>
+      </button>
+      <button class="row danger" role="menuitem" data-settings="logout">
+        ${I.logout(iconStyle(18))}
+        <span class="grow">התנתקות<span class="hint">חזרה למסך הפתיחה</span></span>
+      </button>
+    </div>
+  </div>`;
+}
+
+/* --------------------------------------------------------------- assistant */
+
+function assistantPanel() {
+  if (!state.assistantOpen) return "";
+
+  const log = state.chat.length
+    ? state.chat
+        .map(
+          (turn) => `
+        <p class="ask">${esc(turn.question)}</p>
+        <div class="answer">
+          <p class="headline">${esc(turn.answer.headline)}</p>
+          ${turn.answer.note ? `<p class="note">${esc(turn.answer.note)}</p>` : ""}
+          ${
+            turn.answer.rows.length
+              ? `<div class="hits">${turn.answer.rows
+                  .map(
+                    (r) => `<button class="hit" data-patient="${r.patient.id}" data-close-assistant="1">
+                      <span class="grow" style="min-width:0;flex:1">
+                        <span class="who">${esc(r.patient.name)}</span>
+                        <span class="where"> · חדר ${getRoom(r.patient.roomId).number}, מיטה ${r.patient.bed} · ${esc(r.where)}</span>
+                        <span class="quote">${highlight(r.quote, turn.answer.terms)}</span>
+                      </span>
+                      ${I.chevron(iconStyle(16))}
+                    </button>`,
+                  )
+                  .join("")}</div>`
+              : ""
+          }
+        </div>`,
+        )
+        .join("")
+    : `<div class="answer">
+        <p class="headline">שאלו על המחלקה — התשובה נשלפת מהרשומות עצמן.</p>
+        <p class="note">כל תשובה מגיעה עם המטופלים והשורות שממנה חושבה, כדי שאפשר יהיה לבדוק אותה מול הרשומה.</p>
+      </div>
+      <div class="suggestions">${ASSISTANT_SUGGESTIONS.map(
+        (s) => `<button data-ask="${esc(s)}">${esc(s)}</button>`,
+      ).join("")}</div>`;
+
+  return `<div class="scrim" data-assistant="close"></div>
+  <aside class="assistant" aria-label="עוזר המחלקה">
+    <div class="head">
+      <span class="mark">${I.assistant(iconStyle(18))}</span>
+      <h2>עוזר המחלקה</h2>
+      <button class="icon-btn" data-assistant="close" aria-label="סגירה">${I.close(iconStyle(18))}</button>
+    </div>
+    <div class="log" id="assistant-log">${log}</div>
+    <div class="compose">
+      <input type="text" id="assistant-input" placeholder="למשל: כמה מטופלים מקבלים מורפיום" autocomplete="off" />
+      <button class="send" data-assistant="send" aria-label="שליחה">${I.send(iconStyle(20))}</button>
+    </div>
+    <p class="source">התשובות נשלפות מהרשומות הטעונות באפליקציה — שמונה הקטגוריות, המשימות, הייעוצים והחסמים — ומצוטטות כלשונן. בתצוגה המוטמעת אין מפתח API, ולכן זהו חיפוש מקומי ולא מודל שפה. כל הנתונים בדיוניים.</p>
+  </aside>`;
+}
+
+/** Marks the searched terms inside a quoted line, so the reason a patient came
+ *  back is visible rather than asserted. */
+function highlight(text, terms) {
+  let out = esc(text);
+  for (const t of terms || []) {
+    if (t.length < 3) continue;
+    out = out.replace(new RegExp(`([\\u0590-\\u05FFa-zA-Z0-9]*${escapeRe(esc(t))}[\\u0590-\\u05FFa-zA-Z0-9]*)`, "gi"), "<mark>$1</mark>");
+  }
+  return out;
+}
+
+function submitQuestion(text) {
+  const question = (text || "").trim();
+  if (!question) return;
+  const answer = askWard(question);
+  state.chat.push({ question, answer });
+  refreshAssistant();
+}
+
+function refreshAssistant() {
+  const old = app.querySelector(".assistant");
+  const scrim = app.querySelector(".scrim");
+  if (old) old.remove();
+  if (scrim) scrim.remove();
+  app.insertAdjacentHTML("beforeend", assistantPanel());
+  const log = document.getElementById("assistant-log");
+  if (log) log.scrollTop = log.scrollHeight;
+  const input = document.getElementById("assistant-input");
+  if (input) input.focus();
+}
+
+function refreshUtility() {
+  const bar = app.querySelector(".utility");
+  if (bar) bar.outerHTML = utilityBar();
 }
 
 /* -------------------------------------------------------------- screen 0 --*/
@@ -104,25 +281,84 @@ function viewOpen() {
       </div>
     </section>
 
-    <section class="handoff">
-      <div id="handoff-inner">
-        <p class="eyebrow">מחלקה פנימית ב׳</p>
-        <h2>בחירת חדר</h2>
-        <button class="enter-btn" data-enter>
-          <span style="position:relative;z-index:1">כניסה למחלקה</span>
-          <span class="glint" aria-hidden="true"></span>
-        </button>
-      </div>
-    </section>
+    ${
+      // With motion suppressed the corridor is a single still and never reaches
+      // its own end, so the way through has to be a control.
+      calm()
+        ? `<section class="handoff"><div id="handoff-inner">
+            <p class="eyebrow">מחלקה פנימית ב׳</p>
+            <h2>בחירת חדר</h2>
+            <button class="enter-btn" data-enter>
+              <span style="position:relative;z-index:1">כניסה למחלקה</span>
+            </button>
+          </div></section>`
+        : ""
+    }
 
     <div class="wash" id="wash" aria-hidden="true"></div>
   </main>`;
 }
 
+/**
+ * The end of the walk.
+ *
+ * The reader has just spent three viewport-heights walking up to a closed door;
+ * the door opens and they step through. `rect` is where the drawn door sits on
+ * screen, so the DOM door that takes over is placed exactly on top of it and
+ * the hand-off from canvas to CSS is invisible.
+ */
+function arriveAtDoor(rect) {
+  if (state.screen !== "open") return;
+  if (calm() || !rect || rect.width < 8) {
+    go("rooms");
+    return;
+  }
+
+  const layer = document.createElement("div");
+  layer.className = "door-transition";
+  layer.setAttribute("role", "presentation");
+  layer.setAttribute("aria-hidden", "true");
+  // No number on this one: it is the door at the end of the corridor, not a
+  // room the reader has chosen yet.
+  layer.innerHTML = `<div class="flyer" style="top:${rect.top}px;left:${rect.left}px;width:${rect.width}px;height:${rect.height}px">${doorSlab(
+    "",
+    { style: "height:100%;aspect-ratio:auto" },
+  )}</div><div class="flood"></div>`;
+  app.appendChild(layer);
+
+  const flyer = layer.querySelector(".flyer");
+  const door = layer.querySelector(".door");
+  const flood = layer.querySelector(".flood");
+
+  const th = Math.min(window.innerHeight * 0.92, 860);
+  const tw = th * 0.8;
+
+  requestAnimationFrame(() => {
+    flyer.style.top = `${(window.innerHeight - th) / 2}px`;
+    flyer.style.left = `${(window.innerWidth - tw) / 2}px`;
+    flyer.style.width = `${tw}px`;
+    flyer.style.height = `${th}px`;
+  });
+  setTimeout(() => door.classList.add("open"), 380);
+  setTimeout(() => {
+    flyer.style.transitionDuration = "460ms";
+    flyer.style.transform = "scale(2.9)";
+    flood.style.opacity = "0.55";
+  }, 700);
+  setTimeout(() => {
+    flyer.style.opacity = "0";
+    flood.style.opacity = "1";
+  }, 1020);
+  setTimeout(() => {
+    layer.remove();
+    go("rooms");
+  }, 1240);
+}
+
 /** The branding dissolves into the cream ground on the way to the ward, rather
  *  than the page simply swapping. */
 function enterWard() {
-  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const reduced = calm();
   if (reduced) {
     go("rooms");
     return;
@@ -220,7 +456,7 @@ function doorTile(room) {
  * light from the room floods past. Four beats, ~820ms end to end.
  */
 function enterRoom(roomId, number, node) {
-  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const reduced = calm();
   if (reduced || !node) {
     go("room", roomId);
     return;

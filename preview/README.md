@@ -22,6 +22,8 @@ motion vocabulary, and it carries the real logic rather than a mock of it:
 | The ״אישור סבב״ review gate | `lib/store/ward-store.tsx` → `src/30-store.js` |
 | Scroll-scrubbed corridor | `components/motion/CorridorScroll.tsx` → `src/50-corridor.js` |
 | Fictitious ward, 15 rooms / 17 patients | `lib/demo-data/ward.ts` → `src/10-data.js` |
+| Ward assistant retrieval engine | `lib/ai/ward-assistant.ts` → `src/25-assistant.js` |
+| Night mode, motion switch | `app/globals.css` + `lib/store/prefs.tsx` |
 
 ## What it is not
 
@@ -31,6 +33,12 @@ rule extractor when there is no key, no network, or a response that fails
 validation. A static file has no server and therefore no key — so the preview
 always runs the fallback, and says so in the recorder every time it structures
 anything. No API key is present in this file, and none can be.
+
+**The assistant answers from the record, not from a model.** In the application
+the question also goes to Claude server-side, which chooses *which patients*
+answer it and writes the summary line — the quotes and the links are still built
+from the chart either way, so a hallucinated name has nowhere to enter. With no
+key the panel runs the retrieval engine alone and says so.
 
 **The microphone may not be reachable.** The browser engine is offered exactly as
 the application offers it; if the embedding page has not granted microphone

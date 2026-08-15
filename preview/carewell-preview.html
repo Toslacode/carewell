@@ -268,17 +268,24 @@ main { padding: 24px 16px 16px; }
 
 .app-header { padding: 16px 16px 0; }
 @media (min-width: 640px) { .app-header { padding: 24px 24px 0; } }
+/* Translucent like the utility rail above it, so the two read as one layer of
+   chrome floating over the ward rather than two competing bars. The inline-end
+   padding reserves the space the fixed utility bar occupies. */
 .app-header .bar {
   display: flex;
   align-items: center;
   gap: 16px;
-  border: 1px solid var(--border);
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
   border-radius: var(--radius-panel);
-  background: var(--card);
+  background: color-mix(in srgb, var(--card) 80%, transparent);
   padding: 14px 16px;
   box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(16px) saturate(1.3);
+  -webkit-backdrop-filter: blur(16px) saturate(1.3);
 }
-@media (min-width: 640px) { .app-header .bar { padding: 14px 24px; } }
+@media (min-width: 640px) {
+  .app-header .bar { padding: 14px 24px; padding-inline-end: 216px; }
+}
 .app-header .mid {
   display: flex;
   min-width: 0;
@@ -483,7 +490,12 @@ main { padding: 24px 16px 16px; }
 
 /* ------------------------------------------------------------- opening ---*/
 
-#screen-open { background: var(--page); }
+/* The opening is one continuous surface, not a picture on a page.
+   The hero ground is painted in the artwork's own cream (#faf1eb, sampled from
+   its corners), the artwork is scaled to cover so there is no letterbox seam,
+   and its edges are dissolved with a radial mask — so what the eye sees is a
+   cream field that happens to carry the mark, which then fades into the page
+   colour at the section boundary. */
 .hero {
   position: relative;
   isolation: isolate;
@@ -491,8 +503,10 @@ main { padding: 24px 16px 16px; }
   place-items: center;
   min-height: 100dvh;
   overflow: hidden;
+  --hero-ground: #faf1eb;
+  background: var(--hero-ground);
 }
-.hero .ground { position: absolute; inset: 0; z-index: -1; background: var(--page); }
+.hero .ground { position: absolute; inset: 0; z-index: -1; background: var(--hero-ground); }
 .hero .field-a {
   position: absolute;
   inset: -12%;
@@ -504,7 +518,16 @@ main { padding: 24px 16px 16px; }
   background: radial-gradient(52% 46% at 18% 84%, #f1e6d6 0%, rgba(241, 230, 214, 0) 66%);
 }
 .hero .art { position: absolute; inset: 0; overflow: hidden; }
-.hero .art img { height: 100%; width: 100%; object-fit: contain; display: block; }
+.hero .art img {
+  height: 100%;
+  width: 100%;
+  object-fit: cover;
+  display: block;
+  transform: scale(1.06);
+  transform-origin: center 46%;
+  -webkit-mask-image: radial-gradient(125% 115% at 50% 46%, #000 52%, transparent 86%);
+  mask-image: radial-gradient(125% 115% at 50% 46%, #000 52%, transparent 86%);
+}
 .hero .art .glare {
   position: absolute;
   inset-block: 0;
@@ -516,8 +539,8 @@ main { padding: 24px 16px 16px; }
 .hero .fade {
   position: absolute;
   inset: 0;
-  background: linear-gradient(to bottom, var(--page) 0%, transparent 18%),
-    linear-gradient(to top, var(--page) 0%, transparent 20%);
+  background: linear-gradient(to bottom, var(--hero-ground) 0%, transparent 16%),
+    linear-gradient(to top, var(--page) 0%, rgba(250, 241, 235, 0) 26%);
 }
 .hero .action {
   position: absolute;
@@ -1319,16 +1342,46 @@ main { padding: 24px 16px 16px; }
 
 .rec-wrap { position: sticky; bottom: 0; z-index: 30; padding: 0 16px 16px; }
 @media (min-width: 640px) { .rec-wrap { padding: 0 24px 16px; } }
+/* Translucent rather than opaque: the bar sits over the record for the whole
+   round, and the doctor needs to keep reading the lines underneath it. The blur
+   keeps the controls legible without the panel becoming a wall. */
 .rec {
   max-width: var(--ward);
   margin: 0 auto;
-  border: 1px solid var(--border);
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
   border-radius: var(--radius-panel);
-  background: color-mix(in srgb, var(--card) 95%, transparent);
+  background: color-mix(in srgb, var(--card) 72%, transparent);
   box-shadow: var(--shadow-bar);
-  backdrop-filter: blur(6px);
-  transition: border-color 500ms, transform 500ms;
+  backdrop-filter: blur(18px) saturate(1.35);
+  -webkit-backdrop-filter: blur(18px) saturate(1.35);
+  transition: border-color 500ms, transform 500ms, background-color 300ms;
 }
+.rec:hover, .rec:focus-within { background: color-mix(in srgb, var(--card) 88%, transparent); }
+/* Collapsed: everything but the mic, the state and the way back out. */
+/* Pinned to the inline-start edge so the mic stays under the same finger when
+   the bar folds and unfolds. */
+.rec.folded { width: fit-content; margin-inline-start: 0; margin-inline-end: auto; }
+.rec.folded .strip { padding: 8px 10px; gap: 10px; flex-direction: row; align-items: center; }
+.rec.folded .mic { height: 40px; width: 40px; }
+.rec.folded .state { min-width: 0; }
+.rec.folded .state .t { font-size: 13px; }
+.fold-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  width: 32px;
+  flex-shrink: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-chip);
+  background: color-mix(in srgb, var(--card) 60%, transparent);
+  color: var(--ink-muted);
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+.fold-btn:hover { background: var(--page-deep); color: var(--ink); }
+.rec .strip .fold-btn { align-self: flex-start; }
+@media (min-width: 640px) { .rec .strip .fold-btn { align-self: center; } }
 .rec.recording { border-color: var(--urgent-line); transform: translateY(-2px); }
 .rec.structuring { border-color: var(--info-line); }
 .rec .notices { display: flex; flex-direction: column; gap: 6px; border-bottom: 1px solid var(--border); padding: 10px 16px; }
@@ -1523,7 +1576,378 @@ main { padding: 24px 16px 16px; }
 }
 .discharge-row:hover { background: color-mix(in srgb, var(--page-deep) 40%, var(--card)); }
 
+/* ------------------------------------------------------- utility bar -----*/
+
+/* A thin translucent rail that floats above every screen: settings on one end,
+   the ward assistant on the other. Deliberately quiet — it is chrome, and the
+   ward is the content. */
+.utility {
+  position: fixed;
+  top: 14px;
+  inset-inline-end: 16px;
+  z-index: 45;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  border-radius: var(--radius-chip);
+  background: color-mix(in srgb, var(--card) 55%, transparent);
+  padding: 5px;
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(16px) saturate(1.3);
+  -webkit-backdrop-filter: blur(16px) saturate(1.3);
+  transition: background-color 0.25s, border-color 0.25s;
+}
+.utility:hover { background: color-mix(in srgb, var(--card) 82%, transparent); }
+.utility .u-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 34px;
+  border: 0;
+  border-radius: var(--radius-chip);
+  background: transparent;
+  padding: 0 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.2s, color 0.2s;
+}
+.utility .u-btn:hover { background: color-mix(in srgb, var(--page-deep) 75%, transparent); color: var(--ink); }
+.utility .u-btn.icon-only { width: 34px; justify-content: center; padding: 0; }
+.utility .u-btn.on { background: var(--navy); color: var(--on-navy); }
+.utility .sep { width: 1px; height: 20px; background: var(--border-strong); }
+
+.menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  inset-inline-end: 0;
+  width: 268px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: color-mix(in srgb, var(--card) 94%, transparent);
+  box-shadow: var(--shadow-lift);
+  backdrop-filter: blur(20px) saturate(1.3);
+  -webkit-backdrop-filter: blur(20px) saturate(1.3);
+}
+.menu .group { padding: 6px; }
+.menu .group + .group { border-top: 1px solid var(--border); }
+.menu .label {
+  padding: 8px 12px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--ink-decor);
+}
+.menu .row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  padding: 9px 12px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: start;
+  transition: background-color 0.2s, color 0.2s;
+}
+.menu .row:hover { background: var(--page-deep); }
+.menu .row .grow { flex: 1; min-width: 0; }
+.menu .row .hint { display: block; margin-top: 1px; font-size: 12px; color: var(--ink-muted); }
+.menu .row.danger { color: var(--urgent); }
+.menu .row.danger:hover { background: var(--urgent-bg); }
+.switch {
+  position: relative;
+  flex-shrink: 0;
+  height: 22px;
+  width: 38px;
+  border-radius: var(--radius-chip);
+  background: var(--border-strong);
+  transition: background-color 0.25s;
+}
+.switch::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  inset-inline-start: 3px;
+  height: 16px;
+  width: 16px;
+  border-radius: var(--radius-chip);
+  background: var(--card-raised);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: transform 0.25s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.switch.on { background: var(--navy); }
+.switch.on::after { transform: translateX(-16px); }
+
+/* ---------------------------------------------------------- assistant ----*/
+
+.assistant {
+  position: fixed;
+  inset-block: 0;
+  inset-inline-end: 0;
+  z-index: 46;
+  display: flex;
+  width: min(430px, 100vw);
+  flex-direction: column;
+  border-inline-start: 1px solid var(--border);
+  background: color-mix(in srgb, var(--card) 92%, transparent);
+  box-shadow: var(--shadow-lift);
+  backdrop-filter: blur(24px) saturate(1.3);
+  -webkit-backdrop-filter: blur(24px) saturate(1.3);
+  animation: assistant-in 0.34s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+@keyframes assistant-in {
+  from { opacity: 0; transform: translateX(-24px); }
+  to { opacity: 1; transform: none; }
+}
+.assistant .head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid var(--border);
+  padding: 16px 18px;
+}
+.assistant .head h2 { flex: 1; font-size: 16px; font-weight: 700; color: var(--navy-deep); }
+.assistant .head .mark {
+  display: grid;
+  place-items: center;
+  height: 34px;
+  width: 34px;
+  border-radius: 11px;
+  background: var(--navy);
+  color: var(--on-navy);
+}
+.assistant .log { flex: 1; overflow-y: auto; padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; }
+.assistant .ask {
+  align-self: flex-start;
+  max-width: 88%;
+  border-radius: 16px 16px 16px 4px;
+  background: var(--navy);
+  color: var(--on-navy);
+  padding: 9px 14px;
+  font-size: 14px;
+}
+.assistant .answer {
+  border: 1px solid var(--border);
+  border-radius: 16px 16px 4px 16px;
+  background: var(--card-raised);
+  padding: 12px 14px;
+}
+.assistant .answer .headline { font-size: 14px; font-weight: 600; line-height: 1.5; color: var(--navy-deep); }
+.assistant .answer .note { margin-top: 6px; font-size: 12px; line-height: 1.6; color: var(--ink-muted); }
+.assistant .hits { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.assistant .hit {
+  display: flex;
+  width: 100%;
+  align-items: flex-start;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  padding: 8px 10px;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+.assistant .hit:hover { background: var(--page-deep); border-color: var(--border-strong); }
+.assistant .hit .who { font-size: 13px; font-weight: 600; color: var(--navy-deep); }
+.assistant .hit .where { font-size: 11px; color: var(--ink-decor); }
+.assistant .hit .quote { display: block; margin-top: 2px; font-size: 12px; line-height: 1.5; color: var(--ink-muted); }
+.assistant .hit mark { background: color-mix(in srgb, var(--info-bg) 90%, transparent); color: var(--info); border-radius: 3px; padding: 0 2px; }
+.assistant .suggestions { display: flex; flex-wrap: wrap; gap: 6px; }
+.assistant .suggestions button {
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-chip);
+  background: var(--card);
+  padding: 6px 12px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--ink-muted);
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+.assistant .suggestions button:hover { background: var(--page-deep); color: var(--navy); }
+.assistant .compose { display: flex; gap: 8px; border-top: 1px solid var(--border); padding: 12px 14px; }
+.assistant .compose input {
+  min-width: 0;
+  flex: 1;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-chip);
+  background: var(--card-raised);
+  padding: 10px 16px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--ink);
+}
+.assistant .compose input:focus { outline: 2px solid var(--navy); outline-offset: 1px; }
+.assistant .send {
+  display: grid;
+  place-items: center;
+  height: 42px;
+  width: 42px;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: var(--radius-chip);
+  background: var(--navy);
+  color: var(--on-navy);
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.assistant .send:hover { background: var(--navy-deep); }
+.assistant .source {
+  border-top: 1px solid var(--border);
+  padding: 10px 18px 14px;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--ink-muted);
+}
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 44;
+  background: rgba(28, 24, 18, 0.24);
+  animation: carewell-rise 0.25s ease-out both;
+}
+
+/* ------------------------------------------------------------ night ------*/
+
+/* Night mode. A ward workstation at 03:00 is a dark room, and the daytime cream
+   is a light source in it. The warm identity survives: the grounds stay
+   brown-leaning rather than blue-grey, the oak stays oak, and the navy inverts
+   its role — a pale blue that carries text and takes dark ink on its buttons,
+   because the daytime navy is unreadable on a dark card. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --page: #14161a;
+  --page-deep: #0e1013;
+  --card: #1b1f25;
+  --card-raised: #222730;
+  --card-sunken: #171b20;
+
+  --navy: #7db0e0;
+  --navy-deep: #a6cbeb;
+  --navy-soft: #6b9cc9;
+  --navy-wash: #1d2a36;
+  --on-navy: #0d1116;
+
+  --ink: #e9e5dd;
+  --ink-muted: #a8a094;
+  --ink-decor: #6f685c;
+
+  --border: #2b3038;
+  --border-strong: #3c434e;
+  --border-navy: #33556f;
+
+  --oak: #b8976e;
+  --oak-light: #cbae87;
+  --oak-pale: #d9c3a3;
+  --oak-dark: #977850;
+  --oak-edge: #6f5837;
+  --handle: #22221f;
+
+  --stable: #82c493;
+  --stable-bg: #16281c;
+  --stable-line: #2c4634;
+
+  --attention: #e39c70;
+  --attention-bg: #2a1d15;
+  --attention-line: #493122;
+
+  --urgent: #f0908a;
+  --urgent-bg: #2c1917;
+  --urgent-line: #4d2925;
+
+  --info: #8dbae0;
+  --info-bg: #16232e;
+  --info-line: #2a4055;
+
+  --neutral: #b3ab9d;
+  --neutral-bg: #1f2229;
+  --neutral-line: #343a44;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.45), 0 6px 16px -8px rgba(0, 0, 0, 0.55);
+  --shadow-lift: 0 2px 6px rgba(0, 0, 0, 0.5), 0 16px 32px -12px rgba(0, 0, 0, 0.6);
+  --shadow-bar: 0 -1px 3px rgba(0, 0, 0, 0.4), 0 -12px 32px -16px rgba(0, 0, 0, 0.6);
+}
+
+/* The corridor at night: the wall goes to shadow, the doorway keeps its warm
+   spill, and the room behind the door is still the lit thing in the frame. */
+:root[data-theme="dark"] .door .wall { background: linear-gradient(180deg, #23262b 0%, #191c21 100%); }
+:root[data-theme="dark"] .door .downlight { opacity: 0.5; }
+:root[data-theme="dark"] .door .rails span { background: #343840; }
+:root[data-theme="dark"] .door .plaque { border-color: #3a3f47; background: #262a31; }
+:root[data-theme="dark"] .door .plaque span { border-color: #444952; }
+:root[data-theme="dark"] .door .frame { background: #2a2d33; box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.5); }
+:root[data-theme="dark"] .door .fixture { background: #fff4dd; box-shadow: 0 0 12px 4px rgba(255, 238, 200, 0.55); }
+:root[data-theme="dark"] .door .room-light { background: linear-gradient(180deg, #fdf6e8 0%, #f0e2c9 55%, #d9c6a4 100%); }
+:root[data-theme="dark"] .door .slab { filter: brightness(0.86); }
+:root[data-theme="dark"] .door-transition { background: var(--page); }
+
+/* The branding artwork is a daylight image. At night it is dimmed and its edges
+   dissolved further, so it reads as a lit sign at the end of a dark corridor
+   rather than a window someone left open. */
+:root[data-theme="dark"] .hero { --hero-ground: #14161a; }
+:root[data-theme="dark"] .hero .art img {
+  filter: brightness(0.44) saturate(0.85) contrast(1.05);
+  -webkit-mask-image: radial-gradient(105% 95% at 50% 46%, #000 34%, transparent 74%);
+  mask-image: radial-gradient(105% 95% at 50% 46%, #000 34%, transparent 74%);
+}
+:root[data-theme="dark"] .hero .field-a {
+  background: radial-gradient(46% 42% at 74% 16%, #22262d 0%, rgba(34, 38, 45, 0) 68%);
+}
+:root[data-theme="dark"] .hero .field-b {
+  background: radial-gradient(52% 46% at 18% 84%, #1c1f24 0%, rgba(28, 31, 36, 0) 66%);
+}
+:root[data-theme="dark"] .hero .art .glare {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.14) 50%, rgba(255, 255, 255, 0) 100%);
+}
+:root[data-theme="dark"] .scrim { background: rgba(0, 0, 0, 0.5); }
+:root[data-theme="dark"] .check.done { color: #0d1116; }
+:root[data-theme="dark"] .switch::after { background: #e9e5dd; }
+
 /* --------------------------------------------------- reduced motion ------*/
+
+/* The same suppression, reachable from the settings menu for readers whose OS
+   preference says nothing but who still want the ward to hold still. */
+:root[data-calm] *,
+:root[data-calm] *::before,
+:root[data-calm] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+:root[data-calm] .settle {
+  animation: none;
+  background-color: var(--navy-wash);
+  box-shadow: 0 0 0 6px var(--navy-wash);
+}
+:root[data-calm] .reveal,
+:root[data-calm] .reveal.shown,
+:root[data-calm] .pop.shown {
+  animation: none !important;
+  opacity: 1;
+  transform: none;
+}
+:root[data-calm] .drift-a,
+:root[data-calm] .drift-b,
+:root[data-calm] .breathe,
+:root[data-calm] .ring-1,
+:root[data-calm] .ring-2 { animation: none !important; }
+:root[data-calm] .sheen,
+:root[data-calm] .scroll-cue { display: none; }
+:root[data-calm] .scanning::after { animation: none; display: none; }
 
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -1714,7 +2138,7 @@ const SEEDS = {
       labs: ["ליפאז 890 U/L", "בילירובין 1.9 mg/dL", "CRP 96 mg/L"],
       imaging: ["US בטן: אבנים בכיס המרה, דרכי מרה תקינות"],
       workingDx: ["דלקת לבלב על רקע אבני מרה"],
-      plan: ["צום", "נוזלים IV", "משככי כאבים"],
+      plan: ["צום", "נוזלים IV", "מורפיום 2 מ״ג IV לפי צורך"],
       tasks: [
         { title: "MRCP", priority: "scheduled", status: "pending", category: "imaging", timing: "מחר" },
         { title: "ליפאז חוזר", priority: "today", status: "pending", category: "labs", timing: "היום" },
@@ -1906,7 +2330,7 @@ const SEEDS = {
       imaging: ["MRI אגן: ללא אוסטאומיאליטיס"],
       otherTests: ["תרבית מהפצע: נשלחה"],
       workingDx: ["פצע לחץ מזוהם", "תת־תזונה"],
-      plan: ["טיפול מקומי יומי", "אנטיביוטיקה", "תוספי תזונה", "מזרן אוויר"],
+      plan: ["טיפול מקומי יומי", "אנטיביוטיקה", "תוספי תזונה", "מזרן אוויר", "מורפיום לפני החלפת חבישה"],
       other: ["נדרשת הערכת המשך טיפול בקהילה"],
       tasks: [
         { title: "תרבית מהפצע", priority: "urgent", status: "done", category: "labs", timing: "עכשיו" },
@@ -2896,6 +3320,320 @@ function moveReviewToOther(p, id) {
 }
 
 /* ===========================================================================
+   עוזר המחלקה — questions answered from the ward's own data.
+
+   This is a retrieval engine, not a language model. It searches the records
+   that are actually loaded, counts what it finds, and answers with the patients
+   it matched — name, room, bed and the line that matched — so every answer can
+   be checked against the record it came from.
+
+   That shape is deliberate. A ward assistant that paraphrases confidently and
+   cites nothing is worse than no assistant at all: the one question a doctor
+   asks it ("who is on morphine?") is exactly the question where a plausible
+   wrong answer does harm. So it never writes a clinical sentence of its own —
+   it quotes, counts, and links.
+
+   In the application this same engine is the fallback, and the primary path
+   sends the ward summary to Claude server-side. It matters that the fallback
+   is the honest-by-construction one: when the model is unavailable, the
+   assistant degrades to quoting the record rather than to guessing.
+   =========================================================================== */
+
+/** Words that carry no search signal in a Hebrew ward question. */
+const STOPWORDS = new Set([
+  "כמה", "מי", "מיהם", "מיהן", "אילו", "איזה", "איזו", "אלו", "מה", "האם", "יש",
+  "לי", "לנו", "שלי", "את", "של", "עם", "או", "גם", "כל", "כלל", "הם", "הן",
+  "הוא", "היא", "זה", "זאת", "לפי", "על", "אל", "כדי", "עכשיו", "כרגע", "היום",
+  "מטופל", "מטופלת", "מטופלים", "מטופלות", "חולה", "חולים", "אנשים", "אדם",
+  "במחלקה", "מחלקה", "בחדר", "חדר", "מיטה", "תראה", "תן", "הצג", "רשימה",
+  "שלוקחים", "לוקחים", "לוקח", "לוקחת", "מקבלים", "מקבל", "מקבלת", "נמצאים",
+  "נמצא", "יושבים", "שיש", "שהם", "שהן", "אשר", "עבור", "בבקשה", "תגיד",
+  "כמות", "מספר", "סהכ", "בסך", "הכל", "צריך", "צריכים", "ליום", "כרגיל",
+]);
+
+/** Fixed questions the ward asks every morning, recognised before free search
+ *  so they answer with the right shape rather than a keyword list. */
+const INTENTS = [
+  {
+    id: "urgent",
+    test: /דחוף|דחופ|בדחיפות|urgent/i,
+    /** Vocabulary the intent already accounts for. A word outside both this and
+     *  `test` means the question is about something else — "אילו מטופלים
+     *  דחופים מקבלים מורפיום" is a morphine question, not a priority one. */
+    absorbs: /^(משימ|פעול|פתוח|סגור|עכשיו|מיידי|נשאר)/,
+    run: () => {
+      const rows = allTasks().filter((r) => r.task.priority === "urgent" && r.task.status !== "done");
+      return {
+        headline:
+          rows.length === 0
+            ? "אין משימות דחופות פתוחות במחלקה."
+            : `${rows.length} משימות דחופות פתוחות, אצל ${new Set(rows.map((r) => r.patient.id)).size} מטופלים.`,
+        rows: rows.map((r) => ({ patient: r.patient, quote: r.task.title, where: "משימה דחופה" })),
+      };
+    },
+  },
+  {
+    id: "discharge",
+    test: /שחרור|לשחרר|משחרר|הביתה/,
+    absorbs: /^(מתוכננ|צפוי|אפשר|מוכנ|היום|מחר|קרוב|רשימ)/,
+    run: () => {
+      const list = patientsList().filter((p) => {
+        const d = activeDischarge(p);
+        return d.status === "today" || d.status === "tomorrow";
+      });
+      return {
+        headline:
+          list.length === 0
+            ? "אין שחרורים מתוכננים להיום או למחר."
+            : `${list.length} מטופלים מסומנים לשחרור אפשרי היום או מחר.`,
+        rows: list.map((p) => {
+          const d = activeDischarge(p);
+          const open = d.blockers.filter((b) => !b.resolved);
+          return {
+            patient: p,
+            quote: `${DISCHARGE_STATUS[d.status].label} · ${open.length === 0 ? "אין חסמים" : `${open.length} חסמים פתוחים`}`,
+            where: "שחרור",
+          };
+        }),
+      };
+    },
+  },
+  {
+    id: "blockers",
+    test: /חסם|חסמים|מעכב|תקוע/,
+    absorbs: /^(פתוח|שחרור|נשאר|רשימ|לשחרור)/,
+    run: () => {
+      const rows = [];
+      for (const p of patientsList()) {
+        for (const b of activeDischarge(p).blockers) {
+          if (!b.resolved) rows.push({ patient: p, quote: b.text, where: "חסם לשחרור" });
+        }
+      }
+      return {
+        headline:
+          rows.length === 0
+            ? "אין חסמי שחרור פתוחים במחלקה."
+            : `${rows.length} חסמי שחרור פתוחים אצל ${new Set(rows.map((r) => r.patient.id)).size} מטופלים.`,
+        rows,
+      };
+    },
+  },
+  {
+    id: "consults",
+    test: /ייעוץ|יעוץ|ייעוצים|יועץ|התייעצות/,
+    absorbs: /^(ממתינ|פתוח|נדרש|הוזמנ|רשימ|הושלמ)/,
+    run: () => {
+      const rows = [];
+      for (const p of patientsList()) {
+        for (const c of activeConsults(p)) {
+          if (c.state !== "completed") {
+            rows.push({ patient: p, quote: `${c.specialty} — ${CONSULT_STATE[c.state].label}`, where: "ייעוץ" });
+          }
+        }
+      }
+      return {
+        headline:
+          rows.length === 0 ? "אין ייעוצים פתוחים." : `${rows.length} ייעוצים שטרם הושלמו.`,
+        rows,
+      };
+    },
+  },
+  {
+    id: "attention",
+    test: /תשומת\s*לב|מצב\s*קשה|לא\s*יציב|מדאיג|החמרה/,
+    absorbs: /^(תשומת|דורש|מצב|קשה|יציב|רשימ)/,
+    run: () => {
+      const list = patientsList().filter((p) => p.status === "attention");
+      return {
+        headline:
+          list.length === 0
+            ? "אין מטופלים המסומנים כדורשים תשומת לב."
+            : `${list.length} מטופלים מסומנים כדורשים תשומת לב.`,
+        rows: list.map((p) => ({ patient: p, quote: p.primaryDiagnosis, where: "אבחנה עיקרית" })),
+      };
+    },
+  },
+  {
+    id: "beds",
+    test: /פנוי|פנויים|מקום|תפוסה|מיטות/,
+    absorbs: /^(חדר|חדרים|מיט|תפוס|מקום|אשפוז)/,
+    run: () => {
+      const empty = ward.rooms.filter((r) => r.status === "empty");
+      const unavailable = ward.rooms.filter((r) => r.status === "unavailable");
+      const total = patientsList().length;
+      return {
+        headline: `${total} מטופלים מאושפזים. ${empty.length} חדרים פנויים${
+          unavailable.length ? `, ${unavailable.length} חדרים אינם פעילים` : ""
+        }.`,
+        rows: [],
+        note: empty.length
+          ? `חדרים פנויים: ${empty.map((r) => r.number).join(", ")}.`
+          : null,
+      };
+    },
+  },
+];
+
+function patientsList() {
+  return Object.values(ward.patients);
+}
+
+function allTasks() {
+  const rows = [];
+  for (const p of patientsList()) {
+    for (const task of activeTasks(p)) rows.push({ task, patient: p });
+  }
+  return rows;
+}
+
+/** Every line of a patient's record, tagged with the section it came from, so a
+ *  match can say where it was found instead of just that it was. */
+function searchableLines(p) {
+  const d = activeData(p);
+  const out = [
+    { where: "אבחנה עיקרית", text: p.primaryDiagnosis },
+    { where: "קופה", text: p.hmo },
+  ];
+  const push = (where, items) => items.forEach((i) => out.push({ where, text: i.text }));
+  push("תלונה עיקרית", d.chiefComplaint);
+  push("מחלות רקע", d.pastMedicalHistory);
+  push("סטטוס סוציאלי", d.socialStatus);
+  push("בדיקה גופנית", d.tests.physicalExam);
+  push("מעבדה", d.tests.labs);
+  push("הדמיה", d.tests.imaging);
+  push("בדיקות נוספות", d.tests.otherTests);
+  push("אבחנת עבודה", d.workingDiagnosis);
+  push("תכנית טיפול", d.treatmentPlan);
+  push("אחר / הערות", d.other);
+  for (const t of activeTasks(p)) out.push({ where: "משימה", text: t.title });
+  for (const c of activeConsults(p)) out.push({ where: "ייעוץ", text: c.specialty });
+  for (const b of activeDischarge(p).blockers) out.push({ where: "חסם לשחרור", text: b.text });
+  for (const key of VITAL_ORDER) {
+    const v = d.vitals[key];
+    if (v) out.push({ where: VITAL_LABELS[key].label, text: `${VITAL_LABELS[key].label} ${v.value}` });
+  }
+  return out;
+}
+
+/**
+ * Hebrew prefixes attach to the noun, and they can be on either side of the
+ * comparison: the question says "מסוכרת" while the record says "סוכרת", or the
+ * question says "סוכרת" while the record says "בסוכרת". So a term is matched
+ * against its own stripped form as well, in both directions.
+ *
+ * Only the leading side is ever loosened. A trailing letter makes a different
+ * word — סוכר is sugar, סוכרת is diabetes — and matching across that would be
+ * the same bug the extractor already had.
+ */
+const HE_PREFIX = /^[בהולכמש]{1,2}(?=[֐-׿]{3,})/;
+
+function termVariants(term) {
+  const base = term.toLowerCase();
+  const stripped = base.replace(HE_PREFIX, "");
+  return stripped !== base ? [base, stripped] : [base];
+}
+
+function termMatches(line, term) {
+  const haystack = line.toLowerCase();
+  for (const v of termVariants(term)) {
+    if (haystack.includes(v)) return true;
+    if (new RegExp(`(?:^|[^\\u0590-\\u05FFa-z0-9])[בהולכמש]{1,2}${escapeRe(v)}`, "i").test(haystack)) return true;
+  }
+  return false;
+}
+
+function escapeRe(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function terms(question) {
+  return question
+    .replace(/[?!.,;:״"׳']/g, " ")
+    .split(/\s+/)
+    .map((w) => w.trim())
+    .filter((w) => w.length >= 3 && !STOPWORDS.has(w));
+}
+
+/**
+ * Answers a question about the ward.
+ * Returns { headline, rows, note, terms } — never prose the engine invented.
+ */
+function askWard(question) {
+  const q = (question || "").trim();
+  if (!q) return null;
+
+  const words = terms(q);
+
+  // A fixed intent wins only when every content word in the question belongs to
+  // it. One word it cannot account for means the question is about something
+  // else, and free search will do better.
+  for (const intent of INTENTS) {
+    if (!intent.test.test(q)) continue;
+    const unaccounted = words.filter(
+      (w) => !intent.test.test(w) && !(intent.absorbs && intent.absorbs.test(w)),
+    );
+    if (unaccounted.length === 0) return { ...intent.run(), terms: [], intent: intent.id };
+  }
+
+  if (words.length === 0) {
+    return {
+      headline: "לא זיהיתי מונח לחיפוש בשאלה.",
+      rows: [],
+      note: "אפשר לשאול למשל: כמה מטופלים מקבלים מורפיום · מי דחוף · אילו שחרורים מתוכננים · חסמים פתוחים.",
+      terms: [],
+    };
+  }
+
+  const matches = [];
+  for (const p of patientsList()) {
+    const hits = [];
+    const covered = new Set();
+    for (const line of searchableLines(p)) {
+      const on = words.filter((w) => termMatches(line.text, w));
+      if (on.length) {
+        hits.push(line);
+        on.forEach((w) => covered.add(w));
+      }
+    }
+    if (hits.length) matches.push({ patient: p, hits, covered });
+  }
+
+  // Best-match, not any-match: a two-word question is answered by the patients
+  // who satisfy the most of it. Falling back to OR would quietly widen "מי
+  // סובל מסוכרת" into everyone whose record contains either word.
+  const best = matches.reduce((m, r) => Math.max(m, r.covered.size), 0);
+  const kept = matches.filter((m) => m.covered.size === best);
+  kept.sort((a, b) => b.hits.length - a.hits.length || a.patient.name.localeCompare(b.patient.name, "he"));
+
+  const matched = words.filter((w) => kept.some((m) => m.covered.has(w)));
+  const label = (matched.length ? matched : words).join(" ");
+  const dropped = words.filter((w) => !matched.includes(w));
+
+  return {
+    headline:
+      kept.length === 0
+        ? `לא נמצאו מטופלים שבמידע שלהם מופיע ״${words.join(" ")}״.`
+        : `${kept.length} ${kept.length === 1 ? "מטופל" : "מטופלים"} עם ״${label}״ ברשומה.`,
+    rows: kept.map((m) => ({ patient: m.patient, quote: m.hits[0].text, where: m.hits[0].where })),
+    note:
+      kept.length === 0
+        ? "החיפוש עובר על כל שמונה הקטגוריות, המשימות, הייעוצים והחסמים. ייתכן שהמונח מנוסח אחרת ברשומה."
+        : dropped.length
+          ? `לא נמצאה התאמה ל־״${dropped.join(" ")}״ — התשובה מבוססת על שאר המונחים בשאלה.`
+          : null,
+    terms: matched.length ? matched : words,
+  };
+}
+
+const ASSISTANT_SUGGESTIONS = [
+  "כמה מטופלים מקבלים מורפיום",
+  "מי מקבל צפטריאקסון",
+  "אילו משימות דחופות פתוחות",
+  "אילו שחרורים מתוכננים",
+  "מי סובל מסוכרת",
+];
+
+/* ===========================================================================
    Rendering helpers, icon set and shared fragments.
 
    The preview renders with template strings and a delegated click handler
@@ -2954,6 +3692,18 @@ const I = {
   alert: (c) => svg('<path d="M12 4.5 21 19.5H3Z"/><path d="M12 10v4.2M12 17.2v.1"/>', c),
   door: (c) =>
     svg('<path d="M6.5 20.5V4.8a1.3 1.3 0 0 1 1.1-1.3l7-1a1.3 1.3 0 0 1 1.4 1.3v16.7"/><path d="M4.5 20.5h15M13.5 12.2v1.6"/>', c),
+  gear: (c) =>
+    svg('<circle cx="12" cy="12" r="3.2"/><path d="M19.4 14.5a1.6 1.6 0 0 0 .32 1.77l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.6 1.6 0 0 0-1.77-.32 1.6 1.6 0 0 0-1 1.47V20a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1.05-1.47 1.6 1.6 0 0 0-1.77.32l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.6 1.6 0 0 0 .32-1.77 1.6 1.6 0 0 0-1.47-1H4a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.47-1.05 1.6 1.6 0 0 0-.32-1.77l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.6 1.6 0 0 0 1.77.32H10a1.6 1.6 0 0 0 1-1.47V4a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.47 1.6 1.6 0 0 0 1.77-.32l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.6 1.6 0 0 0-.32 1.77V10a1.6 1.6 0 0 0 1.47 1H20a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.47 1Z"/>', c),
+  moon: (c) => svg('<path d="M20 14.2A8.2 8.2 0 0 1 9.8 4 8.4 8.4 0 1 0 20 14.2Z"/>', c),
+  sun: (c) =>
+    svg('<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.2 5.2l1.4 1.4M17.4 17.4l1.4 1.4M18.8 5.2l-1.4 1.4M6.6 17.4l-1.4 1.4"/>', c),
+  logout: (c) => svg('<path d="M14.5 8.5V6a1.5 1.5 0 0 0-1.5-1.5H6A1.5 1.5 0 0 0 4.5 6v12A1.5 1.5 0 0 0 6 19.5h7a1.5 1.5 0 0 0 1.5-1.5v-2.5"/><path d="M9.5 12h10M16.5 8.5 20 12l-3.5 3.5"/>', c),
+  motion: (c) => svg('<path d="M4 12h4l2-5 3 10 2-5h5"/>', c),
+  assistant: (c) =>
+    svg('<path d="M4.5 6.5A2 2 0 0 1 6.5 4.5h11a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H12l-4.5 3.5V15.5H6.5a2 2 0 0 1-2-2Z"/><path d="M9 9.5h6M9 12.5h3.5"/>', c),
+  close: (c) => svg('<path d="M6 6l12 12M18 6L6 18"/>', c),
+  send: (c) => svg('<path d="M20 4 3.5 11l6.5 2.2L12.2 20Z"/><path d="M10 13.2 20 4"/>', c),
+  chevronUp: (c) => svg('<path d="M6 14.5l6-6 6 6"/>', c),
   wheat: (c) =>
     svg('<path d="M12 21V8"/><path d="M12 8c0-2 1.2-3.6 3-4.5.4 2.2-.6 4-3 4.5ZM12 8c0-2-1.2-3.6-3-4.5-.4 2.2.6 4 3 4.5Z"/><path d="M12 13c0-1.8 1.1-3.2 2.7-4 .4 2-.5 3.6-2.7 4ZM12 13c0-1.8-1.1-3.2-2.7-4-.4 2 .5 3.6 2.7 4Z"/><path d="M12 17.5c0-1.6 1-2.9 2.4-3.6.3 1.8-.5 3.2-2.4 3.6ZM12 17.5c0-1.6-1-2.9-2.4-3.6-.3 1.8.5 3.2 2.4 3.6Z"/>', c),
 };
@@ -2995,7 +3745,6 @@ function header(opts) {
   return `<header class="app-header"><div class="bar ward">
     <button class="lockup-btn" data-go="rooms" style="border:0;background:none;padding:0;cursor:pointer" title="חזרה לבחירת חדר">${lockup()}<span class="sr-only">חזרה לבחירת חדר</span></button>
     <div class="mid"><p class="ward-name">מחלקה פנימית ב׳</p>${mid}</div>
-    <span class="staff">${I.user(iconStyle(18))}צוות${I.chevronDown(iconStyle(16))}</span>
   </div></header>`;
 }
 
@@ -3036,7 +3785,7 @@ function doorSlab(number, opts) {
 function armReveals(root) {
   const nodes = root.querySelectorAll(".reveal:not(.shown)");
   if (!nodes.length) return;
-  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  if (calm()) {
     nodes.forEach((n) => n.classList.add("shown"));
     return;
   }
@@ -3087,7 +3836,11 @@ const DOOR_DEPTH = 1.15;
  *  room-selection screen opens. */
 const WALK = 25.1;
 
-function mountCorridor(section) {
+/** The walk is finished at this point; the door ahead opens on its own. Short of
+ *  1 so it fires while the reader is still moving, not after they hit the stop. */
+const ARRIVE_AT = 0.975;
+
+function mountCorridor(section, onArrive) {
   const canvas = section.querySelector("canvas");
   const ctx = canvas.getContext("2d");
   if (!ctx) return () => {};
@@ -3096,6 +3849,10 @@ function mountCorridor(section) {
   let shown = 0;
   let running = false;
   let raf = 0;
+  let arrived = false;
+  /** Where the far door sits on screen in CSS pixels, so the DOM door that
+   *  opens at the end can be placed exactly over the drawn one. */
+  let doorRect = null;
 
   function draw(t) {
     const W = canvas.width;
@@ -3155,6 +3912,15 @@ function mountCorridor(section) {
     slab.addColorStop(0.55, "#C9A87C");
     slab.addColorStop(1, "#B99669");
     quad([[dL, dT], [dR, dT], [dR, eB], [dL, eB]], slab);
+
+    // Recorded in CSS pixels for the hand-off to the DOM door.
+    const scale = canvas.clientWidth / W;
+    doorRect = {
+      left: dL * scale,
+      top: dT * scale,
+      width: (dR - dL) * scale,
+      height: (eB - dT) * scale,
+    };
 
     // handle, only once it is large enough to read
     const handleW = (dR - dL) * 0.13;
@@ -3287,6 +4053,26 @@ function mountCorridor(section) {
     shown += (target - shown) * 0.12;
     if (Math.abs(target - shown) < 0.0015) shown = target;
     draw(shown);
+
+    // Reaching the end of the corridor IS the transition. The reader walked up
+    // to the door; the door opens. Pressing a button to do what the walk was
+    // already doing would break the illusion the whole sequence buys.
+    if (!arrived && target >= ARRIVE_AT && onArrive) {
+      arrived = true;
+      running = false;
+      cancelAnimationFrame(raf);
+      const rect = canvas.getBoundingClientRect();
+      onArrive(
+        doorRect && {
+          left: rect.left + doorRect.left,
+          top: rect.top + doorRect.top,
+          width: doorRect.width,
+          height: doorRect.height,
+        },
+      );
+      return;
+    }
+
     if (running) raf = requestAnimationFrame(tick);
   }
 
@@ -3337,7 +4123,42 @@ const state = {
    *  change while the reader is already there — re-arming an observer would
    *  leave anything scrolled past stuck at opacity 0. */
   animate: true,
+  settingsOpen: false,
+  assistantOpen: false,
+  /** Answered questions, newest last. Kept in memory only. */
+  chat: [],
 };
+
+/* ------------------------------------------------------------ preferences */
+
+const PREF_KEY = "carewell.prefs.v1";
+
+const prefs = { theme: "light", calmMotion: false };
+
+function loadPrefs() {
+  try {
+    Object.assign(prefs, JSON.parse(localStorage.getItem(PREF_KEY) || "{}"));
+  } catch {
+    // A sandboxed frame may refuse storage entirely; defaults are fine.
+  }
+  applyPrefs();
+}
+
+function applyPrefs() {
+  document.documentElement.setAttribute("data-theme", prefs.theme);
+  document.documentElement.toggleAttribute("data-calm", prefs.calmMotion);
+  try {
+    localStorage.setItem(PREF_KEY, JSON.stringify(prefs));
+  } catch {
+    // Preference is still applied for this session.
+  }
+}
+
+/** True when motion should be suppressed — either the OS asked, or the reader
+ *  did through the settings menu. */
+function calm() {
+  return prefs.calmMotion || window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
 
 const app = document.getElementById("app");
 let disposeCorridor = null;
@@ -3370,18 +4191,160 @@ function render() {
             ? viewPatient()
             : viewTasks();
 
-  app.innerHTML = html;
+  app.innerHTML = html + utilityBar() + settingsMenuHost() + assistantPanel();
   armReveals(app);
   state.animate = false;
 
   if (state.screen === "open") {
     const section = app.querySelector(".corridor");
-    if (section) disposeCorridor = mountCorridor(section);
+    if (section) disposeCorridor = mountCorridor(section, arriveAtDoor);
   }
   if (state.screen === "patient") {
     mountRecorder();
     focusEditor();
   }
+}
+
+/* ----------------------------------------------------- utility + settings -*/
+
+function utilityBar() {
+  return `<div class="utility">
+    <button class="u-btn" data-assistant="open" aria-label="עוזר המחלקה">
+      ${I.assistant(iconStyle(18))}<span>עוזר המחלקה</span>
+    </button>
+    <span class="sep" aria-hidden="true"></span>
+    <button class="u-btn icon-only${state.settingsOpen ? " on" : ""}" data-settings="toggle"
+      aria-label="הגדרות" aria-expanded="${state.settingsOpen}" title="הגדרות">
+      ${I.gear(iconStyle(18))}
+    </button>
+    ${state.settingsOpen ? settingsMenu() : ""}
+  </div>`;
+}
+
+function settingsMenuHost() {
+  return "";
+}
+
+function settingsMenu() {
+  const night = prefs.theme === "dark";
+  return `<div class="menu" role="menu">
+    <div class="group">
+      <p class="label">תצוגה</p>
+      <button class="row" role="menuitemcheckbox" aria-checked="${night}" data-pref="theme">
+        ${night ? I.moon(iconStyle(18)) : I.sun(iconStyle(18))}
+        <span class="grow">מצב לילה<span class="hint">${night ? "פעיל — רקע כהה לסבב לילה" : "כבוי — תצוגת יום"}</span></span>
+        <span class="switch${night ? " on" : ""}" aria-hidden="true"></span>
+      </button>
+      <button class="row" role="menuitemcheckbox" aria-checked="${prefs.calmMotion}" data-pref="motion">
+        ${I.motion(iconStyle(18))}
+        <span class="grow">הפחתת תנועה<span class="hint">${prefs.calmMotion ? "אנימציות מושבתות" : "אנימציות פעילות"}</span></span>
+        <span class="switch${prefs.calmMotion ? " on" : ""}" aria-hidden="true"></span>
+      </button>
+    </div>
+    <div class="group">
+      <p class="label">חשבון</p>
+      <button class="row" role="menuitem" data-settings="restart">
+        ${I.back(iconStyle(18))}
+        <span class="grow">איפוס נתוני ההדגמה<span class="hint">מחזיר את המחלקה למצב ההתחלתי</span></span>
+      </button>
+      <button class="row danger" role="menuitem" data-settings="logout">
+        ${I.logout(iconStyle(18))}
+        <span class="grow">התנתקות<span class="hint">חזרה למסך הפתיחה</span></span>
+      </button>
+    </div>
+  </div>`;
+}
+
+/* --------------------------------------------------------------- assistant */
+
+function assistantPanel() {
+  if (!state.assistantOpen) return "";
+
+  const log = state.chat.length
+    ? state.chat
+        .map(
+          (turn) => `
+        <p class="ask">${esc(turn.question)}</p>
+        <div class="answer">
+          <p class="headline">${esc(turn.answer.headline)}</p>
+          ${turn.answer.note ? `<p class="note">${esc(turn.answer.note)}</p>` : ""}
+          ${
+            turn.answer.rows.length
+              ? `<div class="hits">${turn.answer.rows
+                  .map(
+                    (r) => `<button class="hit" data-patient="${r.patient.id}" data-close-assistant="1">
+                      <span class="grow" style="min-width:0;flex:1">
+                        <span class="who">${esc(r.patient.name)}</span>
+                        <span class="where"> · חדר ${getRoom(r.patient.roomId).number}, מיטה ${r.patient.bed} · ${esc(r.where)}</span>
+                        <span class="quote">${highlight(r.quote, turn.answer.terms)}</span>
+                      </span>
+                      ${I.chevron(iconStyle(16))}
+                    </button>`,
+                  )
+                  .join("")}</div>`
+              : ""
+          }
+        </div>`,
+        )
+        .join("")
+    : `<div class="answer">
+        <p class="headline">שאלו על המחלקה — התשובה נשלפת מהרשומות עצמן.</p>
+        <p class="note">כל תשובה מגיעה עם המטופלים והשורות שממנה חושבה, כדי שאפשר יהיה לבדוק אותה מול הרשומה.</p>
+      </div>
+      <div class="suggestions">${ASSISTANT_SUGGESTIONS.map(
+        (s) => `<button data-ask="${esc(s)}">${esc(s)}</button>`,
+      ).join("")}</div>`;
+
+  return `<div class="scrim" data-assistant="close"></div>
+  <aside class="assistant" aria-label="עוזר המחלקה">
+    <div class="head">
+      <span class="mark">${I.assistant(iconStyle(18))}</span>
+      <h2>עוזר המחלקה</h2>
+      <button class="icon-btn" data-assistant="close" aria-label="סגירה">${I.close(iconStyle(18))}</button>
+    </div>
+    <div class="log" id="assistant-log">${log}</div>
+    <div class="compose">
+      <input type="text" id="assistant-input" placeholder="למשל: כמה מטופלים מקבלים מורפיום" autocomplete="off" />
+      <button class="send" data-assistant="send" aria-label="שליחה">${I.send(iconStyle(20))}</button>
+    </div>
+    <p class="source">התשובות נשלפות מהרשומות הטעונות באפליקציה — שמונה הקטגוריות, המשימות, הייעוצים והחסמים — ומצוטטות כלשונן. בתצוגה המוטמעת אין מפתח API, ולכן זהו חיפוש מקומי ולא מודל שפה. כל הנתונים בדיוניים.</p>
+  </aside>`;
+}
+
+/** Marks the searched terms inside a quoted line, so the reason a patient came
+ *  back is visible rather than asserted. */
+function highlight(text, terms) {
+  let out = esc(text);
+  for (const t of terms || []) {
+    if (t.length < 3) continue;
+    out = out.replace(new RegExp(`([\\u0590-\\u05FFa-zA-Z0-9]*${escapeRe(esc(t))}[\\u0590-\\u05FFa-zA-Z0-9]*)`, "gi"), "<mark>$1</mark>");
+  }
+  return out;
+}
+
+function submitQuestion(text) {
+  const question = (text || "").trim();
+  if (!question) return;
+  const answer = askWard(question);
+  state.chat.push({ question, answer });
+  refreshAssistant();
+}
+
+function refreshAssistant() {
+  const old = app.querySelector(".assistant");
+  const scrim = app.querySelector(".scrim");
+  if (old) old.remove();
+  if (scrim) scrim.remove();
+  app.insertAdjacentHTML("beforeend", assistantPanel());
+  const log = document.getElementById("assistant-log");
+  if (log) log.scrollTop = log.scrollHeight;
+  const input = document.getElementById("assistant-input");
+  if (input) input.focus();
+}
+
+function refreshUtility() {
+  const bar = app.querySelector(".utility");
+  if (bar) bar.outerHTML = utilityBar();
 }
 
 /* -------------------------------------------------------------- screen 0 --*/
@@ -3420,25 +4383,84 @@ function viewOpen() {
       </div>
     </section>
 
-    <section class="handoff">
-      <div id="handoff-inner">
-        <p class="eyebrow">מחלקה פנימית ב׳</p>
-        <h2>בחירת חדר</h2>
-        <button class="enter-btn" data-enter>
-          <span style="position:relative;z-index:1">כניסה למחלקה</span>
-          <span class="glint" aria-hidden="true"></span>
-        </button>
-      </div>
-    </section>
+    ${
+      // With motion suppressed the corridor is a single still and never reaches
+      // its own end, so the way through has to be a control.
+      calm()
+        ? `<section class="handoff"><div id="handoff-inner">
+            <p class="eyebrow">מחלקה פנימית ב׳</p>
+            <h2>בחירת חדר</h2>
+            <button class="enter-btn" data-enter>
+              <span style="position:relative;z-index:1">כניסה למחלקה</span>
+            </button>
+          </div></section>`
+        : ""
+    }
 
     <div class="wash" id="wash" aria-hidden="true"></div>
   </main>`;
 }
 
+/**
+ * The end of the walk.
+ *
+ * The reader has just spent three viewport-heights walking up to a closed door;
+ * the door opens and they step through. `rect` is where the drawn door sits on
+ * screen, so the DOM door that takes over is placed exactly on top of it and
+ * the hand-off from canvas to CSS is invisible.
+ */
+function arriveAtDoor(rect) {
+  if (state.screen !== "open") return;
+  if (calm() || !rect || rect.width < 8) {
+    go("rooms");
+    return;
+  }
+
+  const layer = document.createElement("div");
+  layer.className = "door-transition";
+  layer.setAttribute("role", "presentation");
+  layer.setAttribute("aria-hidden", "true");
+  // No number on this one: it is the door at the end of the corridor, not a
+  // room the reader has chosen yet.
+  layer.innerHTML = `<div class="flyer" style="top:${rect.top}px;left:${rect.left}px;width:${rect.width}px;height:${rect.height}px">${doorSlab(
+    "",
+    { style: "height:100%;aspect-ratio:auto" },
+  )}</div><div class="flood"></div>`;
+  app.appendChild(layer);
+
+  const flyer = layer.querySelector(".flyer");
+  const door = layer.querySelector(".door");
+  const flood = layer.querySelector(".flood");
+
+  const th = Math.min(window.innerHeight * 0.92, 860);
+  const tw = th * 0.8;
+
+  requestAnimationFrame(() => {
+    flyer.style.top = `${(window.innerHeight - th) / 2}px`;
+    flyer.style.left = `${(window.innerWidth - tw) / 2}px`;
+    flyer.style.width = `${tw}px`;
+    flyer.style.height = `${th}px`;
+  });
+  setTimeout(() => door.classList.add("open"), 380);
+  setTimeout(() => {
+    flyer.style.transitionDuration = "460ms";
+    flyer.style.transform = "scale(2.9)";
+    flood.style.opacity = "0.55";
+  }, 700);
+  setTimeout(() => {
+    flyer.style.opacity = "0";
+    flood.style.opacity = "1";
+  }, 1020);
+  setTimeout(() => {
+    layer.remove();
+    go("rooms");
+  }, 1240);
+}
+
 /** The branding dissolves into the cream ground on the way to the ward, rather
  *  than the page simply swapping. */
 function enterWard() {
-  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const reduced = calm();
   if (reduced) {
     go("rooms");
     return;
@@ -3536,7 +4558,7 @@ function doorTile(room) {
  * light from the room floods past. Four beats, ~820ms end to end.
  */
 function enterRoom(roomId, number, node) {
-  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const reduced = calm();
   if (reduced || !node) {
     go("room", roomId);
     return;
@@ -4236,6 +5258,8 @@ const rec = {
   aiNote: null,
   aiEngine: null,
   provider: null,
+  /** Folded down to a compact strip so it stops covering the record. */
+  folded: false,
   clock: null,
   debounce: null,
   waveRaf: 0,
@@ -4558,6 +5582,35 @@ function recordingBar(p) {
   const engine = engines.find((e) => e.id === rec.engineId);
   const transcript = [rec.finalText, rec.partialText].filter(Boolean).join(" ");
 
+  // Folded: the bar shrinks to the mic, the state and the way back out, and
+  // gives the record underneath it back to the reader. Nothing about the round
+  // pauses — the timer runs, the transcript keeps accumulating, and the AI
+  // keeps filling the sections the reader can now see.
+  if (rec.folded) {
+    return `<div class="rec-wrap" id="rec-wrap">
+      <section class="rec folded ${phase}" aria-label="הקלטת סבב — מכווץ">
+        <div class="strip">
+          <button class="mic${phase === "recording" ? " on" : phase === "paused" ? " paused" : ""}"
+            data-rec="${phase === "recording" ? "pause" : phase === "paused" ? "resume" : "begin"}"
+            ${phase === "preparing" || phase === "structuring" ? "disabled" : ""}
+            aria-label="${phase === "recording" ? "השהיית ההקלטה" : phase === "paused" ? "המשך ההקלטה" : "התחלת סבב מוקלט"}">
+            ${I.mic(iconStyle(20))}
+            ${phase === "recording" ? `<span class="ring ring-1" aria-hidden="true"></span><span class="ring ring-2" aria-hidden="true"></span>` : ""}
+          </button>
+          <div class="state">
+            <p class="t">${esc(stateLabel(phase))}</p>
+            ${phase === "recording" || phase === "paused" ? `<p class="s tnum">${formatClock(rec.seconds)}</p>` : ""}
+          </div>
+          ${phase === "recording" || phase === "paused" ? `<button class="btn quiet sm" data-rec="stop">${I.stop(iconStyle(16))}סיום</button>` : ""}
+          ${phase === "review" || isDraft ? `<button class="btn primary sm" data-rec="approve">${I.check(iconStyle(16))}אישור סבב</button>` : ""}
+          <button class="fold-btn" data-rec="unfold" aria-label="הרחבת סרגל ההקלטה" title="הרחבה">
+            ${I.chevronUp(iconStyle(18))}
+          </button>
+        </div>
+      </section>
+    </div>`;
+  }
+
   const notices =
     rec.error || rec.aiNote
       ? `<div class="notices">
@@ -4641,6 +5694,10 @@ function recordingBar(p) {
         </div>
 
         <div class="controls">${controls}</div>
+
+        <button class="fold-btn" data-rec="fold" aria-label="כיווץ סרגל ההקלטה" title="כיווץ">
+          ${I.chevronDown(iconStyle(18))}
+        </button>
       </div>
 
       ${
@@ -4909,6 +5966,30 @@ function cancelEditor() {
 }
 
 document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    if (state.assistantOpen) {
+      state.assistantOpen = false;
+      refreshAssistant();
+      return;
+    }
+    if (state.settingsOpen) {
+      state.settingsOpen = false;
+      refreshUtility();
+      return;
+    }
+  }
+
+  const ask = e.target.closest && e.target.closest("#assistant-input");
+  if (ask) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const value = ask.value;
+      ask.value = "";
+      submitQuestion(value);
+    }
+    return;
+  }
+
   const input = e.target.closest && e.target.closest('input[data-editor="1"]');
   if (!input) return;
   if (e.key === "Enter") {
@@ -4918,6 +5999,51 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
     e.preventDefault();
     cancelEditor();
+  }
+});
+
+/**
+ * Double-click to edit.
+ *
+ * The pencil is the discoverable path; this is the fast one. A doctor correcting
+ * a mis-heard creatinine mid-round should be able to hit the number itself
+ * rather than aim for a 15px icon that only appears on hover.
+ */
+document.addEventListener("dblclick", (e) => {
+  const p = getPatient(state.patientId);
+  if (!p) return;
+
+  const line = e.target.closest && e.target.closest(".item");
+  if (line) {
+    const row = line.querySelector("[data-edit-item]");
+    if (row) {
+      state.editing = {
+        kind: "item",
+        path: row.getAttribute("data-path"),
+        id: row.getAttribute("data-edit-item"),
+      };
+      refreshRecord();
+      return;
+    }
+  }
+
+  const vital = e.target.closest && e.target.closest(".vital");
+  if (vital) {
+    const key = vital.querySelector("[data-edit-vital]");
+    if (key) {
+      state.editing = { kind: "vital", key: key.getAttribute("data-edit-vital") };
+      refreshRecord();
+      return;
+    }
+  }
+
+  const task = e.target.closest && e.target.closest(".task-row .title");
+  if (task) {
+    const row = task.closest("li").querySelector("[data-edit-task]");
+    if (row) {
+      state.editing = { kind: "task", id: row.getAttribute("data-edit-task") };
+      refreshRecord();
+    }
   }
 });
 
@@ -4940,6 +6066,77 @@ document.addEventListener("click", (e) => {
     const node = t.closest(`[${attr}]`);
     return node ? node.getAttribute(attr) : null;
   };
+
+  /* --------------------------------------------------- settings + assistant */
+  const settings = hit("data-settings");
+  if (settings) {
+    if (settings === "toggle") state.settingsOpen = !state.settingsOpen;
+    if (settings === "restart") {
+      // A demo that cannot be put back is a demo you only get to run once.
+      const fresh = buildDemoWard();
+      ward.rooms = fresh.rooms;
+      ward.patients = fresh.patients;
+      state.settingsOpen = false;
+      state.chat = [];
+      cancelRound();
+      go("rooms");
+      return;
+    }
+    if (settings === "logout") {
+      state.settingsOpen = false;
+      state.assistantOpen = false;
+      cancelRound();
+      go("open");
+      return;
+    }
+    refreshUtility();
+    return;
+  }
+
+  const pref = hit("data-pref");
+  if (pref) {
+    if (pref === "theme") prefs.theme = prefs.theme === "dark" ? "light" : "dark";
+    if (pref === "motion") prefs.calmMotion = !prefs.calmMotion;
+    applyPrefs();
+    refreshUtility();
+    return;
+  }
+
+  if (state.settingsOpen && !t.closest(".utility")) {
+    state.settingsOpen = false;
+    refreshUtility();
+  }
+
+  const assistant = hit("data-assistant");
+  if (assistant) {
+    if (assistant === "open") {
+      state.assistantOpen = true;
+      state.settingsOpen = false;
+      refreshUtility();
+      refreshAssistant();
+    } else if (assistant === "close") {
+      state.assistantOpen = false;
+      refreshAssistant();
+    } else if (assistant === "send") {
+      const input = document.getElementById("assistant-input");
+      if (input) {
+        const value = input.value;
+        input.value = "";
+        submitQuestion(value);
+      }
+    }
+    return;
+  }
+
+  const suggested = hit("data-ask");
+  if (suggested) {
+    submitQuestion(suggested);
+    return;
+  }
+
+  if (t.closest("[data-close-assistant]")) {
+    state.assistantOpen = false;
+  }
 
   /* ------------------------------------------------------------ navigation */
   if (t.closest("[data-enter]")) {
@@ -5103,7 +6300,10 @@ document.addEventListener("click", (e) => {
     else if (action === "stop") void stopRound();
     else if (action === "cancel") cancelRound();
     else if (action === "approve") confirmRound();
-    else if (action === "engines") {
+    else if (action === "fold" || action === "unfold") {
+      rec.folded = action === "fold";
+      refreshRecorder();
+    } else if (action === "engines") {
       state.enginePickerOpen = !state.enginePickerOpen;
       refreshRecorder();
     }
@@ -5127,6 +6327,7 @@ document.addEventListener("click", (e) => {
 document.documentElement.setAttribute("dir", "rtl");
 document.documentElement.setAttribute("lang", "he");
 
+loadPrefs();
 render();
 
 })();

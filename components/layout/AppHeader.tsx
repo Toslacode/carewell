@@ -1,14 +1,17 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { CarewellLockup } from "@/components/branding/CarewellLockup";
-import { IconChevronDown, IconUser, IconWheat } from "@/components/ui/icons";
+import { IconWheat } from "@/components/ui/icons";
 import { BackLink } from "@/components/ui/primitives";
 
 /**
  * The ward header from the reference screens, laid out for RTL: brand at the
- * start (right edge in Hebrew), ward title centred, staff control at the end.
- * The reference's shield-and-cross badge is replaced by the actual CAREWELL
- * mark — see CarewellLockup for why.
+ * start (right edge in Hebrew), ward title centred. The reference's
+ * shield-and-cross badge is replaced by the actual CAREWELL mark — see
+ * CarewellLockup for why.
+ *
+ * The end of the bar is left empty on purpose: the fixed utility rail floats
+ * there, and the inline-end padding is the space it occupies.
  */
 export function AppHeader({
   back,
@@ -19,7 +22,7 @@ export function AppHeader({
 }) {
   return (
     <header className="px-4 pt-4 sm:px-6 sm:pt-6">
-      <div className="mx-auto flex max-w-ward items-center gap-4 rounded-panel border border-line bg-card px-4 py-3.5 shadow-sm sm:px-6">
+      <div className="mx-auto flex max-w-ward items-center gap-4 rounded-panel border border-line/70 bg-card/80 px-4 py-3.5 shadow-sm backdrop-blur-xl sm:px-6 sm:pe-[216px]">
         <Link
           href="/rooms"
           className="shrink-0 rounded-card transition-opacity hover:opacity-80"
@@ -35,13 +38,6 @@ export function AppHeader({
           {back ? <BackLink href={back.href}>{back.label}</BackLink> : children}
         </div>
 
-        <div className="flex shrink-0 items-center gap-2">
-          <span className="hidden items-center gap-2 rounded-chip border border-line-strong px-3.5 py-2 text-sm font-medium text-ink sm:inline-flex">
-            <IconUser className="h-[18px] w-[18px] text-ink-muted" />
-            צוות
-            <IconChevronDown className="h-4 w-4 text-ink-muted" />
-          </span>
-        </div>
       </div>
     </header>
   );

@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { DoorSlab } from "@/components/rooms/Door";
 import { DOOR_VIDEO } from "@/lib/assets";
-import type { Room } from "@/lib/schemas/clinical";
 
 /**
  * Entering a room.
@@ -29,11 +28,13 @@ export interface DoorOrigin {
 type Stage = "zoom" | "open" | "through" | "flood";
 
 export function DoorTransition({
-  room,
+  number,
   origin,
   onDone,
 }: {
-  room: Room;
+  /** The room being entered, or null for the door at the end of the corridor —
+   *  which the reader has walked up to but not yet chosen a room behind. */
+  number: number | null;
   origin: DoorOrigin;
   onDone: () => void;
 }) {
@@ -102,12 +103,12 @@ export function DoorTransition({
               preload="auto"
             />
             <span className="pointer-events-none absolute inset-x-0 top-[18%] text-center text-[clamp(2rem,7vw,3.6rem)] font-semibold leading-none text-[#FDFAF4] [text-shadow:0_1px_3px_rgba(90,68,38,.35)]">
-              {room.number}
+              {number}
             </span>
           </>
         ) : (
           <DoorSlab
-            number={room.number}
+            number={number ?? ""}
             open={stage !== "zoom"}
             className="h-full rounded-card"
           />
