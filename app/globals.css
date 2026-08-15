@@ -1,0 +1,251 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---------------------------------------------------------------------------
+   Heebo, self-hosted variable (SIL OFL, license in public/assets/fonts).
+   Hebrew subset first so it wins for Hebrew glyphs.
+--------------------------------------------------------------------------- */
+
+@font-face {
+  font-family: "Heebo";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/assets/fonts/heebo-hebrew-wght-normal.woff2") format("woff2");
+  unicode-range: U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F;
+}
+
+@font-face {
+  font-family: "Heebo";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/assets/fonts/heebo-latin-wght-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191,
+    U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* ---------------------------------------------------------------------------
+   Design tokens.
+
+   One committed look: warm cream ground, deep navy primary, light natural oak.
+   No dark mode — a ward workstation at 07:30 is a lit room, and the calm cream
+   surface is the product's identity. color-scheme is pinned so form controls
+   and scrollbars follow rather than fight it.
+
+   Every value below is contrast-checked against its intended ground. Secondary
+   text uses --ink-muted (5.2:1 on page, 5.7:1 on card). --ink-decor is BELOW
+   4.5:1 by design and is for non-informational marks only — dividers, the
+   footer glyph — never for text a doctor has to read.
+--------------------------------------------------------------------------- */
+
+:root {
+  color-scheme: light;
+
+  /* grounds */
+  --page: #f7f1e8;
+  --page-deep: #f1e8dc;
+  --card: #fdfbf7;
+  --card-raised: #ffffff;
+  --card-sunken: #f5efe6;
+
+  /* brand */
+  --navy: #1b3a5c;
+  --navy-deep: #12293f;
+  --navy-soft: #2f5578;
+  --navy-wash: #eaf0f5;
+
+  /* text */
+  --ink: #1c2b3a;
+  --ink-muted: #6b6459;
+  --ink-decor: #a89e8e;
+  --on-navy: #ffffff;
+
+  /* structure */
+  --border: #e7dfd3;
+  --border-strong: #d9cfc0;
+  --border-navy: #c3d2df;
+
+  /* wood — light modern natural oak, never dark brown, never gold */
+  --oak: #c9a87c;
+  --oak-light: #dcc4a0;
+  --oak-pale: #e8d7bd;
+  --oak-dark: #a8875c;
+  --oak-edge: #94764f;
+  --handle: #3a3a38;
+
+  /* semantic status — kept deliberately separate from the brand navy.
+     "attention" is a terracotta rather than an amber: at this saturation an
+     amber reads as gold, which the design system rules out entirely. */
+  --stable: #3f6b4c;
+  --stable-bg: #e8f0e9;
+  --stable-line: #c7dacb;
+
+  --attention: #9c5230;
+  --attention-bg: #f7e9e2;
+  --attention-line: #e8cdbe;
+
+  --urgent: #993a34;
+  --urgent-bg: #f8e7e5;
+  --urgent-line: #efc9c5;
+
+  --info: #2f5e86;
+  --info-bg: #e6eff6;
+  --info-line: #c6dae9;
+
+  --neutral: #5f594f;
+  --neutral-bg: #efeae1;
+  --neutral-line: #ded5c8;
+
+  /* elevation — warm-tinted, never neutral gray, so shadows sit in the cream */
+  --shadow-sm: 0 1px 2px rgba(90, 74, 52, 0.05);
+  --shadow-card: 0 1px 3px rgba(90, 74, 52, 0.06), 0 6px 16px -8px rgba(90, 74, 52, 0.1);
+  --shadow-lift: 0 2px 6px rgba(90, 74, 52, 0.08), 0 16px 32px -12px rgba(90, 74, 52, 0.16);
+  --shadow-bar: 0 -1px 3px rgba(90, 74, 52, 0.05), 0 -12px 32px -16px rgba(90, 74, 52, 0.18);
+
+  --radius-card: 18px;
+  --radius-panel: 22px;
+  --radius-chip: 999px;
+}
+
+/* ---------------------------------------------------------------------------
+   Base
+--------------------------------------------------------------------------- */
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--page);
+    color: var(--ink);
+    font-family: var(--font-ui);
+    font-synthesis-weight: none;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Clinical data is read in columns and compared down the page — figures must
+     not jitter between rows. Applies to vitals, labs, IDs, ages, timers. */
+  .tnum,
+  time,
+  output {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+  }
+
+  /* Latin clinical terms, drug names, lab keys and numbers embedded in Hebrew
+     prose. Isolation keeps the bidi algorithm from reordering the surrounding
+     Hebrew when a string starts or ends with punctuation or a digit. */
+  .ltr {
+    direction: ltr;
+    unicode-bidi: isolate;
+    text-align: left;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--navy);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  ::selection {
+    background: var(--navy);
+    color: var(--on-navy);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Motion
+
+   Motion here communicates navigation and state, never decoration. Each
+   keyframe below maps to a specific product moment; anything that would be
+   purely ornamental is deliberately absent.
+--------------------------------------------------------------------------- */
+
+/* A value the AI just placed into a clinical section. The doctor needs to see
+   *where* the system put what it heard — a brief warm wash, then gone. */
+@keyframes carewell-settle {
+  0% {
+    background-color: var(--navy-wash);
+    box-shadow: 0 0 0 6px var(--navy-wash);
+  }
+  100% {
+    background-color: transparent;
+    box-shadow: 0 0 0 6px transparent;
+  }
+}
+
+@keyframes carewell-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes carewell-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.settle {
+  animation: carewell-settle 1.6s ease-out both;
+  border-radius: 6px;
+}
+
+.rise {
+  animation: carewell-rise 0.32s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  animation-delay: calc(var(--d, 0) * 45ms);
+}
+
+.rec-dot {
+  animation: carewell-pulse 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* The settle wash is the only signal that says "this value is new". With
+     motion off it becomes a static tint the doctor can still see. */
+  .settle {
+    animation: none;
+    background-color: var(--navy-wash);
+    box-shadow: 0 0 0 6px var(--navy-wash);
+  }
+}
+
+/* Utility: hide visually, keep for screen readers */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
