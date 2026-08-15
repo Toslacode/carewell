@@ -86,9 +86,11 @@ export function DoorSlab({
             </span>
           </span>
 
-          {/* lever handle, inline-end side of the slab */}
-          <span className="absolute end-[9%] top-[54%] h-[7px] w-[24%] rounded-[2px] bg-handle shadow-[0_1px_1px_rgba(0,0,0,.28)]" />
-          <span className="absolute end-[9%] top-[50%] h-[15px] w-[7px] rounded-[2px] bg-handle/90" />
+          {/* Lever handle, inline-end side. Sits a little higher than a real
+              door's would so it survives the crop on the room-selection grid —
+              without the handle the slab stops reading as a door at all. */}
+          <span className="absolute end-[9%] top-[45%] h-[7px] w-[24%] rounded-[2px] bg-handle shadow-[0_1px_1px_rgba(0,0,0,.28)]" />
+          <span className="absolute end-[9%] top-[41%] h-[15px] w-[7px] rounded-[2px] bg-handle/90" />
         </div>
 
         {/* the lit room revealed behind the slab as it swings */}
@@ -144,7 +146,10 @@ export function DoorTile({
       aria-label={description}
       data-room={room.number}
       className={cn(
-        "group relative flex flex-col overflow-hidden rounded-card border bg-card text-start",
+        // w-full/h-full are load-bearing: a <button> has intrinsic form-control
+        // sizing, so it shrinks to its caption text inside a grid cell rather
+        // than filling it — which made every door a different size.
+        "group relative flex h-full w-full flex-col overflow-hidden rounded-card border bg-card text-start",
         "transition-[transform,box-shadow,border-color] duration-200",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy focus-visible:ring-offset-2 focus-visible:ring-offset-page",
         unavailable
@@ -153,10 +158,19 @@ export function DoorTile({
         selected && "border-navy shadow-lift",
       )}
     >
-      <DoorSlab number={room.number} dim={unavailable || empty} />
+      {/* The door is cropped rather than scaled: a full-height door at this
+          column width would push the third row off a 1440×900 screen, and the
+          whole point of this screen is that the ward is scannable in seconds.
+          Cropping keeps the door's real proportions and shows it from the
+          lintel down past the handle, which is what the eye needs. */}
+      <span className="relative block aspect-[5/4] w-full overflow-hidden">
+        <span className="absolute inset-x-0 top-0 block">
+          <DoorSlab number={room.number} dim={unavailable || empty} />
+        </span>
+      </span>
 
       {/* signage strip — secondary information, deliberately subordinate */}
-      <span className="flex min-h-[46px] items-center justify-between gap-2 border-t border-line px-3.5 py-2.5">
+      <span className="flex min-h-[42px] flex-1 items-center justify-between gap-2 border-t border-line px-3.5 py-2">
         <span className="text-[13px] font-medium text-ink-muted">
           {unavailable
             ? (room.note ?? "אינו פעיל")
