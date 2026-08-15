@@ -26,6 +26,7 @@ const config: Config = {
           soft: "rgb(var(--navy-soft-rgb) / <alpha-value>)",
           wash: "rgb(var(--navy-wash-rgb) / <alpha-value>)",
         },
+        accent: "rgb(var(--accent-rgb) / <alpha-value>)",
 
         ink: {
           DEFAULT: "rgb(var(--ink-rgb) / <alpha-value>)",

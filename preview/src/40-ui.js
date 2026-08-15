@@ -69,6 +69,8 @@ const I = {
   close: (c) => svg('<path d="M6 6l12 12M18 6L6 18"/>', c),
   send: (c) => svg('<path d="M20 4 3.5 11l6.5 2.2L12.2 20Z"/><path d="M10 13.2 20 4"/>', c),
   chevronUp: (c) => svg('<path d="M6 14.5l6-6 6 6"/>', c),
+  clarioMark: (c) =>
+    svg('<path d="M12 7.7c-1.3-1-3-1.6-4.8-1.6-.5 0-.85.35-.85.8v6.25c0 .45.4.8.85.8 1.8 0 3.5.5 4.8 1.55"/><path d="M12 7.7c1.3-1 3-1.6 4.8-1.6.5 0 .85.35.85.8v6.25c0 .45-.4.8-.85.8-1.8 0-3.5.5-4.8 1.55"/><path d="M12 7.7v7.8" stroke-width="1.1"/><path d="m15.7 5.3 1.8 1.8-4.05 4.05-2.2.4.4-2.2z" fill="var(--accent)" stroke="var(--accent)" stroke-width="1"/><path d="M10.25 16.8c-.8-.75-1.7-1.3-2.8-1.55-.7-.15-1.25.2-1.35.8-.1.55.2 1 .75 1.25 1.25.55 2.25 1.25 3.05 2.15" stroke-width="1.3"/><path d="M13.75 16.8c.8-.75 1.7-1.3 2.8-1.55.7-.15 1.25.2 1.35.8.1.55-.2 1-.75 1.25-1.25.55-2.25 1.25-3.05 2.15" stroke-width="1.3"/>', c),
   wheat: (c) =>
     svg('<path d="M12 21V8"/><path d="M12 8c0-2 1.2-3.6 3-4.5.4 2.2-.6 4-3 4.5ZM12 8c0-2-1.2-3.6-3-4.5-.4 2.2.6 4 3 4.5Z"/><path d="M12 13c0-1.8 1.1-3.2 2.7-4 .4 2-.5 3.6-2.7 4ZM12 13c0-1.8-1.1-3.2-2.7-4-.4 2 .5 3.6 2.7 4Z"/><path d="M12 17.5c0-1.6 1-2.9 2.4-3.6.3 1.8-.5 3.2-2.4 3.6ZM12 17.5c0-1.6-1-2.9-2.4-3.6-.3 1.8.5 3.2 2.4 3.6Z"/>', c),
 };
@@ -98,7 +100,7 @@ function emptyState(icon, title, hint) {
 }
 
 function lockup() {
-  return `<span class="lockup"><span class="mark">${I.wheat('style="width:22px;height:22px"')}</span><span class="word">CARE<b>WELL</b></span></span>`;
+  return `<span class="lockup"><span class="mark">${I.clarioMark('style="width:22px;height:22px"')}</span><span class="word">Clari<i class="ring" aria-hidden="true"></i><span class="sr-only">O</span></span></span>`;
 }
 
 function header(opts) {

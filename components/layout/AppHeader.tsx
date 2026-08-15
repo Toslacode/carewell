@@ -1,14 +1,14 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { CarewellLockup } from "@/components/branding/CarewellLockup";
+import { ClarioLockup } from "@/components/branding/ClarioLockup";
 import { IconWheat } from "@/components/ui/icons";
 import { BackLink } from "@/components/ui/primitives";
 
 /**
  * The ward header from the reference screens, laid out for RTL: brand at the
  * start (right edge in Hebrew), ward title centred. The reference's
- * shield-and-cross badge is replaced by the actual CAREWELL mark — see
- * CarewellLockup for why.
+ * shield-and-cross badge is replaced by the actual CLARIO mark — see
+ * ClarioLockup for why.
  *
  * The end of the bar is left empty on purpose: the fixed utility rail floats
  * there, and the inline-end padding is the space it occupies.
@@ -27,7 +27,7 @@ export function AppHeader({
           href="/rooms"
           className="shrink-0 rounded-card transition-opacity hover:opacity-80"
         >
-          <CarewellLockup />
+          <ClarioLockup />
           <span className="sr-only">חזרה לבחירת חדר</span>
         </Link>
 

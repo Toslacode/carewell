@@ -73,6 +73,10 @@
   --navy-soft: rgb(var(--navy-soft-rgb));
   --navy-wash-rgb: 234 240 245;
   --navy-wash: rgb(var(--navy-wash-rgb));
+  /* The bright blue of the O in the CLARIO mark. Brand only — it never carries
+     clinical meaning, which is what keeps it clear of the semantic set. */
+  --accent-rgb: 67 137 224;
+  --accent: rgb(var(--accent-rgb));
 
   /* text */
   --ink-rgb: 28 43 58;
@@ -221,7 +225,7 @@
 
 /* A value the AI just placed into a clinical section. The doctor needs to see
    *where* the system put what it heard — a brief warm wash, then gone. */
-@keyframes carewell-settle {
+@keyframes clario-settle {
   0% {
     background-color: var(--navy-wash);
     box-shadow: 0 0 0 6px var(--navy-wash);
@@ -232,7 +236,7 @@
   }
 }
 
-@keyframes carewell-rise {
+@keyframes clario-rise {
   from {
     opacity: 0;
     transform: translateY(6px);
@@ -243,7 +247,7 @@
   }
 }
 
-@keyframes carewell-pulse {
+@keyframes clario-pulse {
   0%,
   100% {
     opacity: 1;
@@ -254,17 +258,17 @@
 }
 
 .settle {
-  animation: carewell-settle 1.6s ease-out both;
+  animation: clario-settle 1.6s ease-out both;
   border-radius: 6px;
 }
 
 .rise {
-  animation: carewell-rise 0.32s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  animation: clario-rise 0.32s cubic-bezier(0.22, 0.61, 0.36, 1) both;
   animation-delay: calc(var(--d, 0) * 45ms);
 }
 
 .rec-dot {
-  animation: carewell-pulse 1.6s ease-in-out infinite;
+  animation: clario-pulse 1.6s ease-in-out infinite;
 }
 
 /* ---------------------------------------------------------------------------
@@ -277,19 +281,19 @@
 
 /* Opening backdrop: two soft fields drifting against each other, standing in
    for the ambient hero footage. Minute-long cycles, no perceptible loop. */
-@keyframes carewell-drift-a {
+@keyframes clario-drift-a {
   0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
   50% { transform: translate3d(-3%, 2%, 0) scale(1.08); }
 }
 
-@keyframes carewell-drift-b {
+@keyframes clario-drift-b {
   0%, 100% { transform: translate3d(0, 0, 0) scale(1.05); }
   50% { transform: translate3d(4%, -3%, 0) scale(1); }
 }
 
 /* A slow specular pass over the branding artwork — the one thing that keeps a
    still image from reading as a screenshot. */
-@keyframes carewell-sheen {
+@keyframes clario-sheen {
   0% { transform: translateX(-120%) skewX(-12deg); opacity: 0; }
   12% { opacity: 0.5; }
   38% { opacity: 0; }
@@ -298,41 +302,41 @@
 
 /* Breathing on the artwork itself: sub-percent scale, far below the threshold
    where it reads as movement, but enough that the screen isn't dead. */
-@keyframes carewell-breathe {
+@keyframes clario-breathe {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.012); }
 }
 
 /* Expanding ring off the record button. */
-@keyframes carewell-ring {
+@keyframes clario-ring {
   0% { transform: scale(1); opacity: 0.55; }
   100% { transform: scale(1.75); opacity: 0; }
 }
 
 /* Sweep across a panel the AI is currently rewriting. */
-@keyframes carewell-scan {
+@keyframes clario-scan {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(200%); }
 }
 
-@keyframes carewell-in {
+@keyframes clario-in {
   from { opacity: 0; transform: translateY(14px); }
   to { opacity: 1; transform: none; }
 }
 
-@keyframes carewell-pop {
+@keyframes clario-pop {
   0% { transform: scale(0.94); opacity: 0; }
   60% { transform: scale(1.015); }
   100% { transform: scale(1); opacity: 1; }
 }
 
-.drift-a { animation: carewell-drift-a 46s ease-in-out infinite; }
-.drift-b { animation: carewell-drift-b 61s ease-in-out infinite; }
-.breathe { animation: carewell-breathe 14s ease-in-out infinite; }
-.sheen { animation: carewell-sheen 9s ease-in-out 1.4s infinite; }
+.drift-a { animation: clario-drift-a 46s ease-in-out infinite; }
+.drift-b { animation: clario-drift-b 61s ease-in-out infinite; }
+.breathe { animation: clario-breathe 14s ease-in-out infinite; }
+.sheen { animation: clario-sheen 9s ease-in-out 1.4s infinite; }
 
-.ring-1 { animation: carewell-ring 2.1s ease-out infinite; }
-.ring-2 { animation: carewell-ring 2.1s ease-out 0.7s infinite; }
+.ring-1 { animation: clario-ring 2.1s ease-out infinite; }
+.ring-2 { animation: clario-ring 2.1s ease-out 0.7s infinite; }
 
 .scanning {
   position: relative;
@@ -350,7 +354,7 @@
     rgba(27, 58, 92, 0.07),
     transparent
   );
-  animation: carewell-scan 1.5s linear infinite;
+  animation: clario-scan 1.5s linear infinite;
 }
 
 /* Entrance used by the Reveal component. `--d` staggers siblings. */
@@ -358,11 +362,11 @@
   opacity: 0;
 }
 .reveal.shown {
-  animation: carewell-in 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  animation: clario-in 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) both;
   animation-delay: calc(var(--d, 0) * 55ms);
 }
 .pop.shown {
-  animation: carewell-pop 0.42s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  animation: clario-pop 0.42s cubic-bezier(0.22, 0.61, 0.36, 1) both;
   animation-delay: calc(var(--d, 0) * 45ms);
 }
 
@@ -392,7 +396,8 @@
 :root[data-calm] .drift-b,
 :root[data-calm] .breathe,
 :root[data-calm] .ring-1,
-:root[data-calm] .ring-2 { animation: none !important; }
+:root[data-calm] .ring-2,
+:root[data-calm] .hero-wave { animation: none !important; }
 :root[data-calm] .sheen,
 :root[data-calm] .scroll-cue { display: none; }
 :root[data-calm] .scanning::after { animation: none; display: none; }
@@ -430,7 +435,8 @@
   .breathe,
   .sheen,
   .ring-1,
-  .ring-2 {
+  .ring-2,
+  .hero-wave {
     animation: none !important;
   }
   .sheen {
@@ -473,6 +479,8 @@
   --navy-soft: rgb(var(--navy-soft-rgb));
   --navy-wash-rgb: 29 42 54;
   --navy-wash: rgb(var(--navy-wash-rgb));
+  --accent-rgb: 96 162 240;
+  --accent: rgb(var(--accent-rgb));
   --on-navy-rgb: 13 17 22;
   --on-navy: rgb(var(--on-navy-rgb));
 
@@ -568,7 +576,9 @@
 /* The branding artwork is a daylight image. At night it is dimmed and its edges
    dissolved further, so it reads as a lit sign at the end of a dark corridor
    rather than a window someone left open. */
-:root[data-theme="dark"] .hero-section { --hero-ground: #14161a; }
+:root[data-theme="dark"] .hero-section { --hero-ground-rgb: 20 22 26; }
+:root[data-theme="dark"] .hero-wave { opacity: 0.35; }
+:root[data-theme="dark"] .hero-video { filter: brightness(0.62) saturate(0.9); }
 :root[data-theme="dark"] .hero-art {
   filter: brightness(0.44) saturate(0.85) contrast(1.05);
   -webkit-mask-image: radial-gradient(105% 95% at 50% 46%, #000 34%, transparent 74%);
@@ -589,33 +599,116 @@
    The opening surface.
 
    The opening is one continuous field, not a picture pasted on a page. The
-   ground is painted in the artwork's own cream (#faf1eb, sampled from its
-   corners), the artwork covers rather than letterboxes so there is no seam, and
-   its edges are dissolved with a radial mask — what the eye sees is a cream
-   field that happens to carry the mark, fading into the page at the boundary.
+   ground is painted in the artwork's own cream (#f5e9de, sampled from its
+   corners) and the artwork sits in a stage locked to its exact aspect ratio, so
+   the composition is never cropped and every point in the image maps to a fixed
+   percentage of the stage. That is what lets the live entry button land exactly
+   on the one drawn into the artwork.
 --------------------------------------------------------------------------- */
 
 .hero-section {
-  --hero-ground-rgb: 250 241 235;
+  --hero-ground-rgb: 245 233 222;
   --hero-ground: rgb(var(--hero-ground-rgb));
   background: var(--hero-ground);
 }
 
-.hero-art {
+/* The stage is locked to the asset's own aspect ratio — 16/9 for the opening
+   clip, 1672/941 for the branding artwork — so nothing is ever cropped or
+   stretched, and the cream around it is the page's own ground rather than a
+   letterbox. */
+.hero-stage {
+  --stage: 1672 / 941;
+  position: relative;
+  aspect-ratio: var(--stage);
+  width: min(100%, calc(100dvh * (var(--stage))));
+  max-height: 100dvh;
+}
+.hero-stage.is-video { --stage: 16 / 9; }
+
+/* The clip is shown whole. The feather touches only the outermost few percent,
+   enough to dissolve the edge into the cream without eating composition. */
+.hero-video {
+  position: absolute;
+  inset: 0;
   height: 100%;
   width: 100%;
-  object-fit: cover;
-  display: block;
-  transform: scale(1.06);
-  transform-origin: center 46%;
-  -webkit-mask-image: radial-gradient(125% 115% at 50% 46%, #000 52%, transparent 86%);
-  mask-image: radial-gradient(125% 115% at 50% 46%, #000 52%, transparent 86%);
+  object-fit: contain;
+  /* The stage is cream before the first frame decodes, so the opening never
+     flashes a black box. */
+  background: var(--hero-ground);
+  -webkit-mask-image: radial-gradient(142% 132% at 50% 50%, #000 80%, transparent 100%);
+  mask-image: radial-gradient(142% 132% at 50% 50%, #000 80%, transparent 100%);
+}
+
+/* A cream breath behind the entry control, so it stays legible over whatever
+   frame is under it without a slab or a scrim across the clip. */
+.hero-cta::before {
+  content: "";
+  position: absolute;
+  inset: -220% -60%;
+  z-index: -1;
+  border-radius: var(--radius-chip);
+  background: radial-gradient(closest-side, rgb(var(--hero-ground-rgb) / 0.86), rgb(var(--hero-ground-rgb) / 0));
+}
+
+.hero-art {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  width: 100%;
+  object-fit: fill;
+  -webkit-mask-image: radial-gradient(108% 102% at 50% 46%, #000 38%, transparent 76%);
+  mask-image: radial-gradient(108% 102% at 50% 46%, #000 38%, transparent 76%);
+}
+
+/* The artwork draws its own call to action at 50% / 75.45%, 18.66% wide and
+   7.65% tall. The live button is placed on top of it, a shade larger so the
+   drawn edges are covered rather than doubled. */
+.hero-cta {
+  position: absolute;
+  left: 50%;
+  top: 75.45%;
+  width: max(196px, 19.6%);
+  min-height: max(46px, 8.6%);
+  transform: translate(-50%, -50%);
+}
+
+.hero-cta-low {
+  top: auto;
+  bottom: 5%;
+  transform: translate(-50%, 0);
+  width: auto;
+  min-width: 216px;
+  padding: 14px 32px;
 }
 
 .hero-fade {
-  background: linear-gradient(to bottom, var(--hero-ground) 0%, transparent 16%),
-    linear-gradient(to top, var(--page) 0%, rgba(250, 241, 235, 0) 26%);
+  background: linear-gradient(to bottom, var(--hero-ground) 0%, transparent 14%),
+    linear-gradient(to top, var(--page) 0%, rgba(245, 233, 222, 0) 24%);
 }
+
+/* Edge waves: long, mutually prime cycles so the two sides never sync and the
+   motion never resolves into a loop. */
+@keyframes clario-wave-a {
+  0%, 100% { transform: translate3d(0, 0, 0) scaleY(1); }
+  50% { transform: translate3d(2.5%, -1.5%, 0) scaleY(1.04); }
+}
+@keyframes clario-wave-b {
+  0%, 100% { transform: translate3d(0, 0, 0) scaleY(1.03); }
+  50% { transform: translate3d(-3%, 2%, 0) scaleY(1); }
+}
+@keyframes clario-wave-c {
+  0%, 100% { transform: translate3d(0, 1%, 0) scaleY(1); }
+  50% { transform: translate3d(4%, -2%, 0) scaleY(1.05); }
+}
+
+.hero-wave { transform-origin: 0% 50%; }
+.hero-wave-0 { animation: clario-wave-a 37s ease-in-out infinite; }
+.hero-wave-1 { animation: clario-wave-b 53s ease-in-out infinite; }
+.hero-wave-2 { animation: clario-wave-c 71s ease-in-out infinite; }
+.hero-wave-3 { animation: clario-wave-b 43s ease-in-out infinite; }
+.hero-wave-4 { animation: clario-wave-c 59s ease-in-out infinite; }
+.hero-wave-5 { animation: clario-wave-a 67s ease-in-out infinite; }
 
 
 /* Utility: hide visually, keep for screen readers */

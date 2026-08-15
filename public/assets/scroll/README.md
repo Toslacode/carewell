@@ -8,7 +8,7 @@ Put here:
   no loops, no cuts, no camera whip. It becomes a timeline the doctor scrubs, so
   it needs a clear start state and a clear end state.
 
-Best fit for CAREWELL: a slow push down a bright modern hospital corridor that
+Best fit for CLARIO: a slow push down a bright modern hospital corridor that
 ends facing a closed patient-room door. That end frame hands off directly into
 the 15-door room-selection screen, which is what makes the opening feel like one
 continuous move into the ward instead of a marketing intro.

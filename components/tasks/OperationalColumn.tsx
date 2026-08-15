@@ -20,6 +20,7 @@ import {
   IconAlert,
   IconCheck,
   IconChevron,
+  IconClose,
   IconClipboard,
   IconHeart,
   IconPencil,
@@ -255,6 +256,29 @@ const CONSULT_STATES: Consultation["state"][] = [
   "completed",
 ];
 
+/** The specialties a ward round actually calls, in the order it calls them.
+ *  Not a closed list — anything not here is typed in, because a ward that
+ *  cannot order the consult it needs will write it in a task instead and the
+ *  panel stops meaning anything. */
+const SPECIALTIES = [
+  "קרדיולוגיה",
+  "ריאות",
+  "נפרולוגיה",
+  "גסטרואנטרולוגיה",
+  "נוירולוגיה",
+  "אנדוקרינולוגיה",
+  "זיהומיות",
+  "כירורגיה",
+  "אורתופדיה",
+  "אורולוגיה",
+  "המטולוגיה",
+  "אונקולוגיה",
+  "פיזיותרפיה",
+  "ריפוי בעיסוק",
+  "תזונה",
+  "עבודה סוציאלית",
+];
+
 function ConsultsPanel({
   patient,
   consults,
@@ -262,8 +286,10 @@ function ConsultsPanel({
   patient: Patient;
   consults: Consultation[];
 }) {
-  const { setConsultState } = useWard();
+  const { setConsultState, addConsult, deleteConsult } = useWard();
+  const [adding, setAdding] = useState(false);
   const pending = consults.filter((c) => c.state !== "completed").length;
+  const taken = new Set(consults.map((c) => c.specialty));
 
   return (
     <section className="overflow-hidden rounded-card border border-line bg-card shadow-card">
@@ -277,12 +303,12 @@ function ConsultsPanel({
         }
       />
 
-      {consults.length === 0 ? (
+      {consults.length === 0 && !adding ? (
         <p className="px-5 py-5 text-[14px] text-ink-muted">לא הוזמנו ייעוצים.</p>
       ) : (
         <ul className="flex flex-col divide-y divide-line">
           {consults.map((consult) => (
-            <li key={consult.id} className="px-4 py-3">
+            <li key={consult.id} className="group/consult px-4 py-3">
               <div className="flex items-center justify-between gap-2">
                 <span className="min-w-0">
                   <span className="block text-[14px] font-medium text-ink">
@@ -294,7 +320,18 @@ function ConsultsPanel({
                     </span>
                   )}
                 </span>
-                <StatusPill descriptor={CONSULT_STATE[consult.state]} size="sm" />
+                <span className="flex shrink-0 items-center gap-1">
+                  <StatusPill descriptor={CONSULT_STATE[consult.state]} size="sm" />
+                  <span className="opacity-0 transition-opacity focus-within:opacity-100 group-hover/consult:opacity-100">
+                    <IconButton
+                      label={`מחיקת ייעוץ ${consult.specialty}`}
+                      onClick={() => deleteConsult(patient.id, consult.id)}
+                      className="h-7 w-7 hover:text-urgent"
+                    >
+                      <IconTrash className="h-[15px] w-[15px]" />
+                    </IconButton>
+                  </span>
+                </span>
               </div>
 
               <div className="mt-2 flex flex-wrap gap-1.5">
@@ -318,7 +355,96 @@ function ConsultsPanel({
           ))}
         </ul>
       )}
+
+      <div className="border-t border-line px-4 py-2.5">
+        {adding ? (
+          <SpecialtyPicker
+            taken={taken}
+            onCancel={() => setAdding(false)}
+            onPick={(specialty) => {
+              addConsult(patient.id, specialty);
+              setAdding(false);
+            }}
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => setAdding(true)}
+            className="inline-flex items-center gap-1.5 rounded-chip px-2 py-1 text-[13px] font-medium text-ink-muted transition-colors hover:bg-page-deep hover:text-navy"
+          >
+            <IconPlus className="h-4 w-4" />
+            הוספת ייעוץ
+          </button>
+        )}
+      </div>
     </section>
+  );
+}
+
+/** Pick from the ward's usual specialties, or type one that is not on the list.
+ *  Specialties already on this patient are shown as taken rather than hidden,
+ *  so the list does not reshuffle between visits. */
+function SpecialtyPicker({
+  taken,
+  onPick,
+  onCancel,
+}: {
+  taken: Set<string>;
+  onPick: (specialty: string) => void;
+  onCancel: () => void;
+}) {
+  const [custom, setCustom] = useState(false);
+
+  if (custom) {
+    return (
+      <InlineInput
+        initial=""
+        placeholder="שם היועץ או התחום…"
+        onCancel={onCancel}
+        onSave={onPick}
+      />
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-2 py-1">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[12px] font-semibold text-ink-muted">בחירת תחום</span>
+        <IconButton label="ביטול" onClick={onCancel} className="h-7 w-7">
+          <IconClose className="h-[15px] w-[15px]" />
+        </IconButton>
+      </div>
+      <div className="flex max-h-[168px] flex-wrap gap-1.5 overflow-y-auto">
+        {SPECIALTIES.map((specialty) => {
+          const already = taken.has(specialty);
+          return (
+            <button
+              key={specialty}
+              type="button"
+              disabled={already}
+              title={already ? "כבר קיים אצל מטופל זה" : undefined}
+              onClick={() => onPick(specialty)}
+              className={cn(
+                "rounded-chip border px-2.5 py-1 text-[12px] font-medium transition-colors",
+                already
+                  ? "cursor-not-allowed border-line bg-page-deep text-ink-decor"
+                  : "border-line-strong bg-card text-ink hover:border-navy hover:bg-navy-wash",
+              )}
+            >
+              {specialty}
+            </button>
+          );
+        })}
+        <button
+          type="button"
+          onClick={() => setCustom(true)}
+          className="inline-flex items-center gap-1 rounded-chip border border-dashed border-line-strong px-2.5 py-1 text-[12px] font-medium text-ink-muted transition-colors hover:bg-page-deep hover:text-navy"
+        >
+          <IconPlus className="h-3.5 w-3.5" />
+          אחר
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -355,7 +481,8 @@ function DischargePanel({
   discharge: Patient["discharge"];
   tasks: Task[];
 }) {
-  const { setDischargeStatus, toggleBlocker } = useWard();
+  const { setDischargeStatus, toggleBlocker, addBlocker, deleteBlocker } = useWard();
+  const [adding, setAdding] = useState(false);
   const openBlockers = discharge.blockers.filter((b) => !b.resolved);
 
   return (
@@ -405,7 +532,7 @@ function DischargePanel({
             </CountBadge>
           }
         />
-        {discharge.blockers.length === 0 ? (
+        {discharge.blockers.length === 0 && !adding ? (
           <p className="px-5 py-5 text-[14px] text-ink-muted">
             לא תועדו חסמים לשחרור.
           </p>
@@ -416,7 +543,10 @@ function DischargePanel({
                 ? clearingTask(blocker.text, tasks)
                 : undefined;
               return (
-                <li key={blocker.id} className="flex items-start gap-2.5 px-4 py-3">
+                <li
+                  key={blocker.id}
+                  className="group/blocker flex items-start gap-2.5 px-4 py-3"
+                >
                   <button
                     type="button"
                     onClick={() => toggleBlocker(patient.id, blocker.id)}
@@ -451,11 +581,43 @@ function DischargePanel({
                       </span>
                     )}
                   </span>
+                  <span className="shrink-0 opacity-0 transition-opacity focus-within:opacity-100 group-hover/blocker:opacity-100">
+                    <IconButton
+                      label={`מחיקת החסם ״${blocker.text}״`}
+                      onClick={() => deleteBlocker(patient.id, blocker.id)}
+                      className="h-7 w-7 hover:text-urgent"
+                    >
+                      <IconTrash className="h-[15px] w-[15px]" />
+                    </IconButton>
+                  </span>
                 </li>
               );
             })}
           </ul>
         )}
+
+        <div className="border-t border-line px-4 py-2.5">
+          {adding ? (
+            <InlineInput
+              initial=""
+              placeholder="מה מעכב את השחרור…"
+              onCancel={() => setAdding(false)}
+              onSave={(text) => {
+                addBlocker(patient.id, text);
+                setAdding(false);
+              }}
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setAdding(true)}
+              className="inline-flex items-center gap-1.5 rounded-chip px-2 py-1 text-[13px] font-medium text-ink-muted transition-colors hover:bg-page-deep hover:text-navy"
+            >
+              <IconPlus className="h-4 w-4" />
+              הוספת חסם
+            </button>
+          )}
+        </div>
       </section>
     </>
   );

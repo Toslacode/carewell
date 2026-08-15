@@ -22,7 +22,7 @@ import {
  * them without a single component knowing which theme is live.
  */
 
-const KEY = "carewell.prefs.v1";
+const KEY = "clario.prefs.v1";
 
 export type Theme = "light" | "dark";
 

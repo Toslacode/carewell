@@ -1,5 +1,5 @@
 /**
- * Builds preview/carewell-preview.html — one self-contained file.
+ * Builds preview/clario-preview.html — one self-contained file.
  *
  * The artifact sandbox blocks every external request (CDN, font host, image
  * host, fetch), so the font subsets and the branding artwork are inlined as
@@ -37,7 +37,12 @@ const fontUri = async (file) => {
   return `data:font/woff2;base64,${buf.toString("base64")}`;
 };
 
-const branding = await sharp(join(root, "public/assets/branding/carewell-branding.png"))
+/** The opening clip, inlined. 2.6 MB of H.264 becomes ~3.5 MB of base64, which
+ *  the 16 MB artifact budget absorbs — and the sandbox blocks every external
+ *  request, so a data URI is the only way a video reaches the page at all. */
+const clip = await readFile(join(root, "public/assets/opening/clario-opening.mp4"));
+
+const branding = await sharp(join(root, "public/assets/branding/clario-branding.png"))
   .resize({ width: 1600 })
   .webp({ quality: 94 })
   .toBuffer();
@@ -55,8 +60,9 @@ const out = shell
   .replace("__VIEWS__", () => views)
   .replace("__RECORDER__", () => recorder)
   .replace("__APP__", () => appjs)
-  .replace("__BRANDING__", `data:image/webp;base64,${branding.toString("base64")}`);
+  .replace("__BRANDING__", `data:image/webp;base64,${branding.toString("base64")}`)
+  .replace("__OPENING_CLIP__", `data:video/mp4;base64,${clip.toString("base64")}`);
 
-const target = join(here, "carewell-preview.html");
+const target = join(here, "clario-preview.html");
 await writeFile(target, out, "utf8");
 console.log(`${target} — ${(Buffer.byteLength(out) / 1024).toFixed(0)} KB`);

@@ -1,10 +1,10 @@
 # In-browser preview
 
-`carewell-preview.html` is the whole CAREWELL flow in one self-contained file:
+`clario-preview.html` is the whole CLARIO flow in one self-contained file:
 open it from a chat, a link, or a double-click — no clone, no install, no server.
 
 ```
-node preview/build.mjs      # rebuilds carewell-preview.html from src/
+node preview/build.mjs      # rebuilds clario-preview.html from src/
 ```
 
 ## What it is

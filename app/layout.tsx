@@ -5,7 +5,7 @@ import { PrefsProvider } from "@/lib/store/prefs";
 import { UtilityBar } from "@/components/layout/UtilityBar";
 
 export const metadata: Metadata = {
-  title: "CAREWELL — מחלקה פנימית ב׳",
+  title: "CLARIO — מחלקה פנימית ב׳",
   description:
     "עוזר סבב למחלקה פנימית. תמלול חי בעברית, מיון קליני אוטומטי והפקת משימות — הכל באישור רופא. אב־טיפוס עם נתוני הדגמה בדיוניים בלבד.",
   robots: { index: false, follow: false },

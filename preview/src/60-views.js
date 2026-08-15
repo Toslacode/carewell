@@ -29,7 +29,7 @@ const state = {
 
 /* ------------------------------------------------------------ preferences */
 
-const PREF_KEY = "carewell.prefs.v1";
+const PREF_KEY = "clario.prefs.v1";
 
 const prefs = { theme: "light", calmMotion: false };
 
@@ -247,6 +247,22 @@ function refreshUtility() {
 
 /* -------------------------------------------------------------- screen 0 --*/
 
+/** Arcs sweeping out from the edge, matching the curvature drawn into the
+ *  artwork's own corners. */
+const WAVES = [
+  { d: "M-40 900C60 720 20 520 90 340 140 208 120 96 60 0", w: 1.1, o: 0.2 },
+  { d: "M-90 900C30 700 -20 500 60 300 120 152 96 60 24 -40", w: 0.9, o: 0.13 },
+  { d: "M-150 880C0 690 -60 470 30 270 96 124 70 40 -10 -60", w: 0.8, o: 0.08 },
+];
+
+function waveSide(side, offset) {
+  const paths = WAVES.map(
+    (w, i) =>
+      `<path d="${w.d}" fill="none" stroke="currentColor" stroke-width="${w.w}" opacity="${w.o}" class="hero-wave hero-wave-${i + offset}"/>`,
+  ).join("");
+  return `<svg class="${side}" viewBox="0 0 200 900" preserveAspectRatio="none" aria-hidden="true">${paths}</svg>`;
+}
+
 function viewOpen() {
   return `
   <main id="main">
@@ -256,20 +272,32 @@ function viewOpen() {
              so the drift never resolves into a visible loop. -->
         <div class="field-a drift-a" aria-hidden="true"></div>
         <div class="field-b drift-b" aria-hidden="true"></div>
-        <div class="art">
-          <img class="breathe" src="__BRANDING__" alt="CAREWELL — טיפול אנושי. כל יום." />
-          <div class="glare sheen" aria-hidden="true"></div>
-        </div>
-        <div class="fade" aria-hidden="true"></div>
+        <div class="waves" aria-hidden="true">${waveSide("start", 0)}${waveSide("end", 3)}</div>
       </div>
 
-      <div class="action" id="hero-action">
-        <button class="enter-btn" data-enter>
+      <!-- The stage is locked to the artwork's aspect ratio, so the identity is
+           never cropped and the live button sits exactly on the one the artwork
+           draws. -->
+      <div class="stage is-video" id="hero-stage">
+        <!-- Autoplay, muted, inline, looping, no controls — the front door of
+             the application, not an embedded player. A browser with no decoder
+             for it falls back to the branding board rather than to an empty
+             cream rectangle. -->
+        <video class="hero-video" autoplay muted loop playsinline preload="auto"
+               disablepictureinpicture controlslist="nodownload noplaybackrate noremoteplayback"
+               aria-label="CLARIO — Turn rounds into action."
+               onerror="this.closest('.stage').classList.add('no-clip')">
+          <source src="__OPENING_CLIP__" type="video/mp4" />
+        </video>
+        <img class="fallback-art breathe" src="__BRANDING__" alt="CLARIO — Turn rounds into action." />
+        <button class="enter-btn low" data-enter>
           <span style="position:relative;z-index:1">כניסה למחלקה</span>
           <span class="glint" aria-hidden="true"></span>
         </button>
-        <span class="scroll-cue" aria-hidden="true"><span></span></span>
       </div>
+
+      <div class="fade" aria-hidden="true"></div>
+      <span class="scroll-cue" aria-hidden="true"><span></span></span>
     </section>
 
     <!-- Moment two: the walk down the corridor. Drawn to canvas and scrubbed by
@@ -288,9 +316,7 @@ function viewOpen() {
         ? `<section class="handoff"><div id="handoff-inner">
             <p class="eyebrow">מחלקה פנימית ב׳</p>
             <h2>בחירת חדר</h2>
-            <button class="enter-btn" data-enter>
-              <span style="position:relative;z-index:1">כניסה למחלקה</span>
-            </button>
+            <button class="btn primary lg" data-enter>כניסה למחלקה</button>
           </div></section>`
         : ""
     }
@@ -364,7 +390,7 @@ function enterWard() {
     return;
   }
   const wash = document.getElementById("wash");
-  for (const id of ["hero-action", "handoff-inner"]) {
+  for (const id of ["hero-stage", "handoff-inner"]) {
     const node = document.getElementById(id);
     if (node) {
       node.style.transition = "transform 560ms ease-out, opacity 560ms ease-out, filter 560ms ease-out";
@@ -880,33 +906,80 @@ function taskRow(p, t) {
   </li>`;
 }
 
+/** The specialties a ward round actually calls, in the order it calls them. Not
+ *  a closed list — anything not here is typed in, because a ward that cannot
+ *  order the consult it needs writes it into a task instead and the panel stops
+ *  meaning anything. */
+const CONSULT_SPECIALTIES = [
+  "קרדיולוגיה", "ריאות", "נפרולוגיה", "גסטרואנטרולוגיה", "נוירולוגיה",
+  "אנדוקרינולוגיה", "זיהומיות", "כירורגיה", "אורתופדיה", "אורולוגיה",
+  "המטולוגיה", "אונקולוגיה", "פיזיותרפיה", "ריפוי בעיסוק", "תזונה",
+  "עבודה סוציאלית",
+];
+
 function consultsPanel(p) {
   const consults = activeConsults(p);
   const pending = consults.filter((c) => c.state !== "completed").length;
+  const picking = state.editing && state.editing.kind === "addConsult";
+  const custom = state.editing && state.editing.kind === "customConsult";
+  const taken = new Set(consults.map((c) => c.specialty));
 
   return `<section class="card">
     ${panelHead(I.stethoscope(iconStyle(18)), "ייעוצים", countBadge(pending === 0 ? "אין ממתינים" : `${pending} ממתינים`, pending > 0 ? "attention" : "neutral"))}
     ${
-      consults.length === 0
+      consults.length === 0 && !picking && !custom
         ? `<p class="none">לא הוזמנו ייעוצים.</p>`
         : `<ul class="rows">${consults
             .map(
-              (c) => `<li>
+              (c) => `<li class="consult-row">
                 <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
                   <span style="min-width:0">
                     <span style="display:block;font-size:14px;font-weight:500">${esc(c.specialty)}</span>
                     ${c.reason ? `<span style="display:block;margin-top:2px;font-size:12px;color:var(--ink-muted)">${esc(c.reason)}</span>` : ""}
                   </span>
-                  ${pill(CONSULT_STATE[c.state], "sm")}
+                  <span style="display:flex;flex-shrink:0;align-items:center;gap:4px">
+                    ${pill(CONSULT_STATE[c.state], "sm")}
+                    <span class="tools">
+                      <button class="icon-btn sm danger" data-del-consult="${c.id}" aria-label="מחיקת ייעוץ ${esc(c.specialty)}">${I.trash(iconStyle(15))}</button>
+                    </span>
+                  </span>
                 </div>
                 <div class="state-row">${CONSULT_STATES.map(
-                  (s) => `<button class="state-btn${s === c.state ? " on" : ""}" data-consult="${c.id}" data-state="${s}">${esc(CONSULT_STATE[s].label)}</button>`,
+                  (st) => `<button class="state-btn${st === c.state ? " on" : ""}" data-consult="${c.id}" data-state="${st}">${esc(CONSULT_STATE[st].label)}</button>`,
                 ).join("")}</div>
               </li>`,
             )
             .join("")}</ul>`
     }
+    <div class="foot">
+      ${
+        custom
+          ? inlineInput("", "שם היועץ או התחום…", { kind: "customConsult" })
+          : picking
+            ? specialtyPicker(taken)
+            : `<button class="add-line" data-add-consult="1">${I.plus(iconStyle(16))}הוספת ייעוץ</button>`
+      }
+    </div>
   </section>`;
+}
+
+/** Specialties already on this patient are shown as taken rather than hidden,
+ *  so the list does not reshuffle between visits. */
+function specialtyPicker(taken) {
+  return `<div class="picker">
+    <div class="picker-head">
+      <span>בחירת תחום</span>
+      <button class="icon-btn sm" data-cancel-picker="1" aria-label="ביטול">${I.close(iconStyle(15))}</button>
+    </div>
+    <div class="picker-list">
+      ${CONSULT_SPECIALTIES.map((sp) =>
+        taken.has(sp)
+          ? `<button class="chip-btn taken" disabled title="כבר קיים אצל מטופל זה">${esc(sp)}</button>`
+          : `<button class="chip-btn" data-pick-consult="${esc(sp)}">${esc(sp)}</button>`,
+      ).join("")}
+      <button class="chip-btn other" data-custom-consult="1">${I.plus(iconStyle(14))}אחר</button>
+    </div>
+  </div>`;
 }
 
 function dischargePanel(p) {
@@ -952,12 +1025,12 @@ function blockersPanel(p) {
   return `<section class="card">
     ${panelHead(I.alert(iconStyle(18)), "חסמים לשחרור", countBadge(open.length === 0 ? "אין חסמים" : `${open.length} פתוחים`, open.length > 0 ? "attention" : "stable"))}
     ${
-      d.blockers.length === 0
+      d.blockers.length === 0 && !(state.editing && state.editing.kind === "addBlocker")
         ? `<p class="none">לא תועדו חסמים לשחרור.</p>`
         : `<ul class="rows">${d.blockers
             .map((b) => {
               const cleared = !b.resolved ? clearingTask(b.text, tasks) : undefined;
-              return `<li>
+              return `<li class="blocker-row">
                 <div style="display:flex;align-items:flex-start;gap:10px">
                   <button class="check sq${b.resolved ? " done" : cleared ? " ready" : ""}" data-blocker="${b.id}"
                     aria-label="${b.resolved ? `סימון "${esc(b.text)}" כלא טופל` : `סימון "${esc(b.text)}" כטופל`}">
@@ -967,11 +1040,21 @@ function blockersPanel(p) {
                     <span style="display:block;font-size:14px${b.resolved ? ";color:var(--ink-muted);text-decoration:line-through" : ""}">${esc(b.text)}</span>
                     ${cleared ? `<span class="blocker-hint">״${esc(cleared.title)}״ בוצעה — ניתן לסמן כטופל</span>` : ""}
                   </span>
+                  <span class="tools">
+                    <button class="icon-btn sm danger" data-del-blocker="${b.id}" aria-label="מחיקת החסם">${I.trash(iconStyle(15))}</button>
+                  </span>
                 </div>
               </li>`;
             })
             .join("")}</ul>`
     }
+    <div class="foot">
+      ${
+        state.editing && state.editing.kind === "addBlocker"
+          ? inlineInput("", "מה מעכב את השחרור…", { kind: "addBlocker" })
+          : `<button class="add-line" data-add-blocker="1">${I.plus(iconStyle(16))}הוספת חסם</button>`
+      }
+    </div>
   </section>`;
 }
 

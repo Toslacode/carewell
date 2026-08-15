@@ -1,4 +1,4 @@
-# CAREWELL
+# CLARIO
 
 An Internal Medicine ward round assistant. Hebrew-first, RTL, built for doctors
 walking the ward — not a marketing site and not an EMR admin panel.
@@ -42,7 +42,7 @@ Each folder documents what belongs in it.
 
 | Folder | Contents | Served |
 |---|---|---|
-| `public/assets/branding/` | CAREWELL identity, used directly | yes |
+| `public/assets/branding/` | CLARIO identity, used directly | yes |
 | `public/assets/opening/` | Screen 0 hero video | yes |
 | `public/assets/scroll/` | scroll-scrub source → extracted frames | frames only |
 | `public/assets/doors/` | door-opening transition | yes |

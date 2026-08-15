@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils/cn";
 
 /**
- * The CAREWELL mark: an open book, a pencil, and two connected hands beneath.
+ * The CLARIO mark: an open book, a pencil, and two connected hands beneath.
  * No heart, no medical cross, no gold — the reference screens' shield-and-cross
  * badge is not this brand's mark and is deliberately not reproduced.
  *
@@ -9,13 +9,13 @@ import { cn } from "@/lib/utils/cn";
  * the responsive reduction for the 32px header lockup, where the artwork's
  * embossed relief and cream ground cannot survive.
  */
-export function CarewellMark({ className }: { className?: string }) {
+export function ClarioMark({ className }: { className?: string }) {
   return (
     <svg
       viewBox="0 0 48 48"
       className={className}
       role="img"
-      aria-label="CAREWELL"
+      aria-label="CLARIO"
       fill="none"
     >
       {/* open book — two leaves meeting at the spine */}
@@ -33,11 +33,11 @@ export function CarewellMark({ className }: { className?: string }) {
       />
       <path d="M24 15.4V31" stroke="currentColor" strokeWidth="1.6" />
 
-      {/* pencil, angled across the right leaf */}
+      {/* pencil, angled across the right leaf — accent blue, as in the mark */}
       <path
         d="m31.4 10.6 3.6 3.6-8.1 8.1-4.4.8.8-4.4z"
-        fill="var(--navy)"
-        stroke="var(--navy)"
+        fill="var(--accent)"
+        stroke="var(--accent)"
         strokeWidth="1.4"
         strokeLinejoin="round"
       />
@@ -65,13 +65,13 @@ export function CarewellMark({ className }: { className?: string }) {
 /**
  * The wordmark.
  *
- * On the full-scale artwork CARE is white with an embossed edge, which reads
- * beautifully at hero size on cream and disappears completely at 15px. The
- * reduction keeps the identity's two-tone split — a lighter first half, deep
- * navy second half — at a weight that survives on a warm ground. This is the
- * one place the identity is adapted, and only because legibility requires it.
+ * The artwork sets CLARI in deep navy and closes on an O drawn as an open ring
+ * in the accent blue — the one place the identity carries a second colour. The
+ * reduction keeps exactly that: the same letters, the same split, and the ring
+ * redrawn as a glyph-sized circle, which survives at 15px where the artwork's
+ * hairline stroke would not.
  */
-export function CarewellWordmark({
+export function ClarioWordmark({
   className,
   onNavy = false,
 }: {
@@ -81,17 +81,24 @@ export function CarewellWordmark({
   return (
     <span
       className={cn(
-        "font-semibold tracking-[0.14em] leading-none whitespace-nowrap",
+        "inline-flex items-center whitespace-nowrap font-semibold uppercase leading-none tracking-[0.2em]",
         className,
       )}
     >
-      <span className={onNavy ? "text-white/70" : "text-navy-soft"}>CARE</span>
-      <span className={onNavy ? "text-white" : "text-navy-deep"}>WELL</span>
+      <span className={onNavy ? "text-white" : "text-navy-deep"}>Clari</span>
+      <span
+        aria-hidden="true"
+        className={cn(
+          "ms-[0.06em] inline-block aspect-square w-[0.74em] rounded-full border-[0.15em]",
+          onNavy ? "border-white/85" : "border-accent",
+        )}
+      />
+      <span className="sr-only">O</span>
     </span>
   );
 }
 
-export function CarewellLockup({
+export function ClarioLockup({
   tagline = true,
   className,
 }: {
@@ -100,12 +107,12 @@ export function CarewellLockup({
 }) {
   return (
     <div className={cn("flex items-center gap-2.5", className)}>
-      <CarewellMark className="h-9 w-9 shrink-0 text-navy" />
+      <ClarioMark className="h-9 w-9 shrink-0 text-navy" />
       <span className="flex flex-col gap-0.5">
-        <CarewellWordmark className="text-[15px]" />
+        <ClarioWordmark className="text-[15px]" />
         {tagline && (
           <span className="text-[11px] leading-none text-ink-muted">
-            טיפול אנושי. כל יום.
+            Turn rounds into action.
           </span>
         )}
       </span>

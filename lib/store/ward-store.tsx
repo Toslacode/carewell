@@ -228,7 +228,7 @@ function applyExtractionTo(
    Store
    =========================================================================== */
 
-const STORAGE_KEY = "carewell.ward.v1";
+const STORAGE_KEY = "clario.ward.v1";
 
 interface WardContextValue {
   rooms: Room[];
@@ -259,6 +259,10 @@ interface WardContextValue {
   addTask: (patientId: string, title: string, priority: TaskPriority) => void;
 
   setConsultState: (patientId: string, consultId: string, state: Consultation["state"]) => void;
+  addConsult: (patientId: string, specialty: string, reason?: string | null) => void;
+  deleteConsult: (patientId: string, consultId: string) => void;
+  addBlocker: (patientId: string, text: string) => void;
+  deleteBlocker: (patientId: string, blockerId: string) => void;
   setDischargeStatus: (patientId: string, status: DischargeStatus) => void;
   toggleBlocker: (patientId: string, blockerId: string) => void;
 
@@ -637,6 +641,74 @@ export function WardProvider({ children }: { children: React.ReactNode }) {
     [update],
   );
 
+  /** A consult ordered mid-round. It starts as "נדרש" — ordering it is a
+   *  separate act from having asked for it, and the panel makes that step
+   *  explicit rather than assuming it. */
+  const addConsult = useCallback(
+    (patientId: string, specialty: string, reason: string | null = null) => {
+      const clean = specialty.trim();
+      if (!clean) return;
+      update(patientId, (p) => {
+        const entry: Consultation = {
+          id: newId("k"),
+          patientId,
+          specialty: clean,
+          state: "required",
+          reason: reason?.trim() || null,
+          createdFrom: "manual",
+        };
+        return p.draftClinicalData
+          ? { ...p, draftConsultations: [...p.draftConsultations, entry] }
+          : { ...p, consultations: [...p.consultations, entry] };
+      });
+    },
+    [update],
+  );
+
+  const deleteConsult = useCallback(
+    (patientId: string, consultId: string) => {
+      update(patientId, (p) => {
+        const drop = (list: Consultation[]) => list.filter((c) => c.id !== consultId);
+        return p.draftClinicalData
+          ? { ...p, draftConsultations: drop(p.draftConsultations) }
+          : { ...p, consultations: drop(p.consultations) };
+      });
+    },
+    [update],
+  );
+
+  const addBlocker = useCallback(
+    (patientId: string, text: string) => {
+      const clean = text.trim();
+      if (!clean) return;
+      update(patientId, (p) => {
+        const add = (d: Patient["discharge"]) => ({
+          ...d,
+          blockers: [...d.blockers, { id: newId("b"), text: clean, resolved: false }],
+        });
+        return p.draftDischarge
+          ? { ...p, draftDischarge: add(p.draftDischarge) }
+          : { ...p, discharge: add(p.discharge) };
+      });
+    },
+    [update],
+  );
+
+  const deleteBlocker = useCallback(
+    (patientId: string, blockerId: string) => {
+      update(patientId, (p) => {
+        const drop = (d: Patient["discharge"]) => ({
+          ...d,
+          blockers: d.blockers.filter((b) => b.id !== blockerId),
+        });
+        return p.draftDischarge
+          ? { ...p, draftDischarge: drop(p.draftDischarge) }
+          : { ...p, discharge: drop(p.discharge) };
+      });
+    },
+    [update],
+  );
+
   const setDischargeStatus = useCallback(
     (patientId: string, status: DischargeStatus) => {
       update(patientId, (p) =>
@@ -707,6 +779,10 @@ export function WardProvider({ children }: { children: React.ReactNode }) {
       deleteTask,
       addTask,
       setConsultState,
+      addConsult,
+      deleteConsult,
+      addBlocker,
+      deleteBlocker,
       setDischargeStatus,
       toggleBlocker,
       resetWard,
@@ -731,6 +807,10 @@ export function WardProvider({ children }: { children: React.ReactNode }) {
       deleteTask,
       addTask,
       setConsultState,
+      addConsult,
+      deleteConsult,
+      addBlocker,
+      deleteBlocker,
       setDischargeStatus,
       toggleBlocker,
       resetWard,

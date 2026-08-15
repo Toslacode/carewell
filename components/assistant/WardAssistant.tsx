@@ -114,7 +114,7 @@ export function WardAssistant({ onClose }: { onClose: () => void }) {
   return (
     <>
       <div
-        className="fixed inset-0 z-40 bg-[rgba(28,24,18,.24)] motion-safe:animate-[carewell-rise_.25s_ease-out_both]"
+        className="fixed inset-0 z-40 bg-[rgba(28,24,18,.24)] motion-safe:animate-[clario-rise_.25s_ease-out_both]"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -122,7 +122,7 @@ export function WardAssistant({ onClose }: { onClose: () => void }) {
         aria-label="עוזר המחלקה"
         className={cn(
           "fixed inset-y-0 end-0 z-50 flex w-[min(430px,100vw)] flex-col border-s border-line bg-card/95 shadow-lift backdrop-blur-xl",
-          "motion-safe:animate-[carewell-in_.34s_cubic-bezier(.22,.61,.36,1)_both]",
+          "motion-safe:animate-[clario-in_.34s_cubic-bezier(.22,.61,.36,1)_both]",
         )}
       >
         <div className="flex items-center gap-2.5 border-b border-line px-4 py-4">

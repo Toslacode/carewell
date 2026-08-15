@@ -16,6 +16,9 @@ import { useEffect, useRef } from "react";
  *   · position read from getBoundingClientRect inside the frame, so scrolling
  *     up reverses the walk for free
  *   · a lerp smooths fast flicks, with a snap so it settles
+ *   · the runway is 170vh — less than one extra screen of scrolling to cross
+ *     the whole corridor, because this is the front door of a tool people open
+ *     every morning, not a scrollytelling piece
  *   · reduced motion collapses the runway and draws one still
  *
  * The scene is a one-point-perspective ward corridor: the camera walks forward
@@ -370,7 +373,7 @@ export function CorridorScroll({
       ref={sectionRef}
       aria-label={label}
       className={className}
-      style={{ position: "relative", height: "300vh" }}
+      style={{ position: "relative", height: "170vh" }}
     >
       <div className="sticky top-0 h-[100dvh] overflow-hidden bg-page">
         <canvas ref={canvasRef} className="block h-full w-full" />

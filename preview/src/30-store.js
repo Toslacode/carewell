@@ -290,6 +290,34 @@ function dismissReview(p, id) {
   const data = activeData(p);
   data.needsReview = data.needsReview.filter((r) => r.id !== id);
 }
+/** A consult ordered mid-round starts as "נדרש": ordering it is a separate act
+ *  from having asked for it, and the panel makes that step explicit. */
+function addConsult(p, specialty) {
+  const clean = specialty.trim();
+  if (!clean) return;
+  activeConsults(p).push({
+    id: nid("k"),
+    patientId: p.id,
+    specialty: clean,
+    state: "required",
+    reason: null,
+    createdFrom: "manual",
+  });
+}
+function deleteConsult(p, id) {
+  if (p.draftClinicalData) p.draftConsultations = p.draftConsultations.filter((c) => c.id !== id);
+  else p.consultations = p.consultations.filter((c) => c.id !== id);
+}
+function addBlocker(p, text) {
+  const clean = text.trim();
+  if (!clean) return;
+  activeDischarge(p).blockers.push({ id: nid("b"), text: clean, resolved: false });
+}
+function deleteBlocker(p, id) {
+  const d = activeDischarge(p);
+  d.blockers = d.blockers.filter((b) => b.id !== id);
+}
+
 function moveReviewToOther(p, id) {
   const data = activeData(p);
   const entry = data.needsReview.find((r) => r.id === id);

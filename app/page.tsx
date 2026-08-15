@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CarewellMark, CarewellWordmark } from "@/components/branding/CarewellLockup";
+import { HeroWaves } from "@/components/motion/HeroWaves";
 import { ScrollSequence } from "@/components/motion/ScrollSequence";
 import { type DoorRect, CorridorScroll } from "@/components/motion/CorridorScroll";
 import { DoorTransition } from "@/components/rooms/DoorTransition";
@@ -38,6 +38,10 @@ export default function OpeningPage() {
   const { calm } = usePrefs();
   const [leaving, setLeaving] = useState(false);
   const [doorway, setDoorway] = useState<DoorRect | null>(null);
+  /** A browser with no decoder for the supplied clip gets the branding board
+   *  rather than an empty cream rectangle with a button floating in it. */
+  const [clipFailed, setClipFailed] = useState(false);
+  const useClip = hasHeroVideo() && !clipFailed;
 
   /**
    * The end of the walk. The reader has just spent three viewport-heights
@@ -74,106 +78,99 @@ export default function OpeningPage() {
   return (
     <main id="main" className="bg-page">
       <section className="hero-section relative isolate grid min-h-[100dvh] place-items-center overflow-hidden">
+        {/* Ambient ground behind the stage: two cream fields on long, mutually
+            prime cycles, and the edge waves that carry the artwork's own arcs
+            into motion. */}
         <div className="absolute inset-0 -z-10">
-          {hasHeroVideo() ? (
+          <div
+            aria-hidden="true"
+            className="hero-field-a drift-a absolute inset-[-12%]"
+            style={{
+              background:
+                "radial-gradient(46% 42% at 74% 16%, #FFFDF8 0%, rgba(255,253,248,0) 68%)",
+            }}
+          />
+          <div
+            aria-hidden="true"
+            className="hero-field-b drift-b absolute inset-[-12%]"
+            style={{
+              background:
+                "radial-gradient(52% 46% at 18% 84%, #EFE0CE 0%, rgba(239,224,206,0) 66%)",
+            }}
+          />
+          <HeroWaves />
+        </div>
+
+        {/* The stage is locked to the asset's own aspect ratio: the opening is
+            shown whole — never cropped, never stretched — and the cream around
+            it is the page's own ground rather than a letterbox. */}
+        <div
+          className={[
+            "hero-stage transition-all duration-[560ms] ease-out",
+            useClip ? "is-video" : "",
+            leaving ? "scale-[0.94] opacity-0 blur-[2px]" : "scale-100 opacity-100",
+          ].join(" ")}
+        >
+          {useClip && (
             <video
-              className="h-full w-full object-cover"
-              style={{ filter: "saturate(.82) contrast(1.03)" }}
+              className="hero-video"
               autoPlay
               muted
               loop
               playsInline
-              preload="metadata"
-              poster={HERO_POSTER ?? BRANDING_IMAGE ?? undefined}
+              // No controls, and none summoned by a long-press either: this is
+              // the front door of the application, not an embedded player.
+              controls={false}
+              disablePictureInPicture
+              controlsList="nodownload noplaybackrate noremoteplayback"
+              preload="auto"
+              // Poster only when one is supplied for this clip. The branding
+              // board is deliberately not used as a stand-in: it is a different
+              // aspect ratio and draws its own call to action, which would show
+              // twice for the moment before the first frame decodes. The stage
+              // is painted cream instead, so there is nothing to flash.
+              poster={HERO_POSTER ?? undefined}
+              aria-label="CLARIO — Turn rounds into action."
+              onError={() => setClipFailed(true)}
             >
               {/* WebM first: a browser without H.264 skips the mp4 and would
                   otherwise render nothing at all. */}
               {HERO_VIDEO_WEBM && <source src={HERO_VIDEO_WEBM} type="video/webm" />}
               {HERO_VIDEO_MP4 && <source src={HERO_VIDEO_MP4} type="video/mp4" />}
             </video>
-          ) : (
-            <>
-              {/* Ambient ground: two cream fields on long, mutually prime
-                  cycles, so the drift never resolves into a visible loop. */}
-              <div
-                aria-hidden="true"
-                className="hero-field-a drift-a absolute inset-[-12%]"
-                style={{
-                  background:
-                    "radial-gradient(46% 42% at 74% 16%, #FFFDF8 0%, rgba(255,253,248,0) 68%)",
-                }}
-              />
-              <div
-                aria-hidden="true"
-                className="hero-field-b drift-b absolute inset-[-12%]"
-                style={{
-                  background:
-                    "radial-gradient(52% 46% at 18% 84%, #F1E6D6 0%, rgba(241,230,214,0) 66%)",
-                }}
-              />
-              {BRANDING_IMAGE && (
-                <div className="absolute inset-0 overflow-hidden">
-                  {/* The artwork already carries the mark, wordmark and
-                      tagline, so it is shown whole rather than cropped behind
-                      a second copy drawn in vector. */}
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={BRANDING_IMAGE}
-                    alt="CAREWELL — טיפול אנושי. כל יום."
-                    className="hero-art breathe"
-                  />
-                  <div
-                    aria-hidden="true"
-                    className="hero-glare sheen pointer-events-none absolute inset-y-0 -left-1/3 w-1/3"
-                    style={{
-                      background:
-                        "linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,.65) 50%, rgba(255,255,255,0) 100%)",
-                    }}
-                  />
-                </div>
-              )}
-            </>
           )}
 
-          {/* Legibility layer + fade into the page ground, so there is no seam
-              between the hero and the page. */}
-          <div
-            aria-hidden="true"
-            className={hasHeroVideo() ? "absolute inset-0 bg-page/40" : "hero-fade absolute inset-0"}
-          />
-        </div>
-
-        <div
-          className={[
-            "flex flex-col items-center px-6 text-center transition-all duration-[560ms] ease-out",
-            // The artwork is letterboxed by object-contain, so the action is
-            // anchored to the viewport bottom rather than offset from centre —
-            // margin maths against an unknown letterbox lands it on the
-            // artwork's own tagline at some window sizes.
-            showArtworkOnly ? "absolute inset-x-0 bottom-[6vh]" : "relative",
-            leaving ? "scale-[0.92] opacity-0 blur-[2px]" : "scale-100 opacity-100",
-          ].join(" ")}
-        >
-          {!showArtworkOnly && (
+          {BRANDING_IMAGE && !useClip && (
             <>
-              <CarewellMark className="rise h-20 w-20 text-navy sm:h-24 sm:w-24" />
-              <CarewellWordmark className="rise mt-5 text-[clamp(2.6rem,9vw,5rem)]" />
-              <p className="rise mt-5 text-[13px] tracking-[0.3em] text-ink-muted sm:text-sm">
-                טיפול אנושי. כל יום.
-              </p>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={BRANDING_IMAGE}
+                alt="CLARIO — Turn rounds into action."
+                className="hero-art breathe"
+              />
+              <span
+                aria-hidden="true"
+                className="hero-glare sheen pointer-events-none absolute inset-y-0 -left-1/3 w-1/3"
+                style={{
+                  background:
+                    "linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,.55) 50%, rgba(255,255,255,0) 100%)",
+                }}
+              />
             </>
           )}
 
           <button
             type="button"
             onClick={enterWard}
-            style={{ ["--d" as string]: 3 }}
             className={[
-              "rise group relative overflow-hidden rounded-chip bg-navy px-8 py-3.5 text-[15px] font-semibold text-on-navy shadow-card",
+              "hero-cta group isolate overflow-visible rounded-chip bg-navy text-[15px] font-semibold text-on-navy shadow-card",
               "transition-[transform,box-shadow,background-color] duration-300",
-              "hover:-translate-y-0.5 hover:bg-navy-deep hover:shadow-lift active:translate-y-0",
-              showArtworkOnly ? "mt-0" : "mt-12",
+              "hover:bg-navy-deep hover:shadow-lift",
+              // Over a clip the control sits low, clear of the composition;
+              // over the artwork it lands on the button the artwork draws.
+              useClip ? "hero-cta-low" : "",
             ].join(" ")}
+            style={{ transformOrigin: "center" }}
           >
             <span className="relative z-10">כניסה למחלקה</span>
             {/* light passing under the cursor, not a colour change */}
@@ -182,15 +179,17 @@ export default function OpeningPage() {
               className="absolute inset-0 -translate-x-full bg-gradient-to-l from-transparent via-white/18 to-transparent transition-transform duration-700 group-hover:translate-x-full"
             />
           </button>
-
-          <span
-            aria-hidden="true"
-            className="rise mt-7 flex h-9 w-[22px] items-start justify-center rounded-full border border-line-strong p-1.5"
-            style={{ ["--d" as string]: 4 }}
-          >
-            <span className="h-1.5 w-1 rounded-full bg-ink-decor motion-safe:animate-bounce" />
-          </span>
         </div>
+
+        {/* fade into the page ground, so there is no seam below the stage */}
+        <div aria-hidden="true" className="hero-fade pointer-events-none absolute inset-0" />
+
+        <span
+          aria-hidden="true"
+          className="absolute inset-x-0 bottom-[3vh] mx-auto flex h-9 w-[22px] items-start justify-center rounded-full border border-line-strong p-1.5"
+        >
+          <span className="h-1.5 w-1 rounded-full bg-ink-decor motion-safe:animate-bounce" />
+        </span>
       </section>
 
       {/* Moment two. Real frames when they exist; the drawn corridor until then

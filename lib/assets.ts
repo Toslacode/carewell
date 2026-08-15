@@ -10,16 +10,24 @@
  * Paths are public URLs, not filesystem paths.
  */
 
-/** Full CAREWELL branding artwork, used exactly as supplied — the identity is
+/** Full CLARIO branding artwork, used exactly as supplied — the identity is
  *  never redrawn at this size. Serves as the opening hero's still state and as
  *  the poster frame once a hero clip exists. */
 export const BRANDING_IMAGE: string | null =
-  "/assets/branding/carewell-branding.png";
+  "/assets/branding/clario-branding.png";
 
-/** Opening hero clip — full-bleed, autoplay, muted, looping.
- *  Fallback: a still cream field with the branding centred. */
-export const HERO_VIDEO_MP4: string | null = null;
+/** Opening hero clip — autoplay, muted, inline, looping, no controls.
+ *  Shown whole rather than cropped: the clip carries the identity, and cropping
+ *  it to fill an arbitrary viewport would cut the mark. The surrounding area is
+ *  the same cream the clip sits on, so there is no letterbox to see.
+ *  Fallback: a still cream field with the branding artwork centred. */
+export const HERO_VIDEO_MP4: string | null = "/assets/opening/clario-opening.mp4";
 export const HERO_VIDEO_WEBM: string | null = null;
+/** Deliberately null while the clip is a different aspect ratio from the
+ *  branding board — a poster in the wrong ratio letterboxes inside the stage,
+ *  and the board carries its own call to action, which would appear twice for
+ *  the moment before the first frame decodes. The stage is painted in the
+ *  opening's cream instead, so there is nothing to flash. */
 export const HERO_POSTER: string | null = null;
 
 /** Scroll-scrubbed sequence. `SCROLL_FRAME_COUNT` frames named

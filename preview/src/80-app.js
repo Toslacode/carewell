@@ -22,6 +22,10 @@ function commitEditor(input) {
     else if (target.kind === "task") {
       const t = activeTasks(p).find((x) => x.id === target.id);
       if (t) t.title = text;
+    } else if (target.kind === "customConsult") {
+      addConsult(p, text);
+    } else if (target.kind === "addBlocker") {
+      addBlocker(p, text);
     } else if (target.kind === "addTask") {
       // A manually typed task has no spoken timing to derive from, so it starts
       // explicitly undefined rather than being guessed at.
@@ -327,6 +331,45 @@ document.addEventListener("click", (e) => {
   }
 
   /* -------------------------------------------- consults, discharge, review */
+  if (t.closest("[data-add-consult]")) {
+    state.editing = { kind: "addConsult" };
+    refreshRecord();
+    return;
+  }
+  if (t.closest("[data-cancel-picker]")) {
+    state.editing = null;
+    refreshRecord();
+    return;
+  }
+  if (t.closest("[data-custom-consult]")) {
+    state.editing = { kind: "customConsult" };
+    refreshRecord();
+    return;
+  }
+  const pickConsult = hit("data-pick-consult");
+  if (pickConsult && p) {
+    addConsult(p, pickConsult);
+    state.editing = null;
+    refreshRecord();
+    return;
+  }
+  const delConsult = hit("data-del-consult");
+  if (delConsult && p) {
+    deleteConsult(p, delConsult);
+    refreshRecord();
+    return;
+  }
+  if (t.closest("[data-add-blocker]")) {
+    state.editing = { kind: "addBlocker" };
+    refreshRecord();
+    return;
+  }
+  const delBlocker = hit("data-del-blocker");
+  if (delBlocker && p) {
+    deleteBlocker(p, delBlocker);
+    refreshRecord();
+    return;
+  }
   const consultId = hit("data-consult");
   if (consultId && p) {
     const c = activeConsults(p).find((x) => x.id === consultId);

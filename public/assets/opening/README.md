@@ -1,9 +1,9 @@
 # opening/
 
-Screen 0, moment 1 — the full-bleed video hero behind the CAREWELL branding.
+Screen 0, moment 1 — the full-bleed video hero behind the CLARIO branding.
 
 Put here:
-- The CAREWELL opening animation/video. MP4 (H.264) or MOV, 1080p or better,
+- The CLARIO opening animation/video. MP4 (H.264) or MOV, 1080p or better,
   6–12s, no audio needed, no burned-in text or logos, calm ambient motion with
   no hard cuts (the wordmark sits on top of it and has to stay readable).
 
