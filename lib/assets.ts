@@ -10,9 +10,11 @@
  * Paths are public URLs, not filesystem paths.
  */
 
-/** Full CAREWELL branding artwork. Used as the opening hero's still state and
- *  as the poster frame for the hero video. Fallback: the vector lockup. */
-export const BRANDING_IMAGE: string | null = null;
+/** Full CAREWELL branding artwork, used exactly as supplied — the identity is
+ *  never redrawn at this size. Serves as the opening hero's still state and as
+ *  the poster frame once a hero clip exists. */
+export const BRANDING_IMAGE: string | null =
+  "/assets/branding/carewell-branding.png";
 
 /** Opening hero clip — full-bleed, autoplay, muted, looping.
  *  Fallback: a still cream field with the branding centred. */

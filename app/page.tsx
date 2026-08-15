@@ -43,6 +43,10 @@ export default function OpeningPage() {
     window.setTimeout(() => router.push("/rooms"), 520);
   }, [router]);
 
+  // With artwork but no footage, the artwork *is* the hero — the entry action
+  // sits below it rather than on top of a redundant vector lockup.
+  const showArtworkOnly = !hasHeroVideo() && Boolean(BRANDING_IMAGE);
+
   return (
     <main id="main" className="bg-page">
       <section className="relative isolate grid min-h-[100dvh] place-items-center overflow-hidden">
@@ -65,11 +69,15 @@ export default function OpeningPage() {
               {HERO_VIDEO_MP4 && <source src={HERO_VIDEO_MP4} type="video/mp4" />}
             </video>
           ) : BRANDING_IMAGE ? (
+            // The supplied artwork already carries the mark, the wordmark and
+            // the tagline, so it is shown whole and centred rather than cropped
+            // behind a second copy drawn in vector. `contain` keeps the cream
+            // ground of the artwork flush with the page's own cream.
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={BRANDING_IMAGE}
-              alt=""
-              className="h-full w-full object-cover"
+              alt="CAREWELL — טיפול אנושי. כל יום."
+              className="h-full w-full object-contain"
             />
           ) : (
             // Fallback ground: the cream field of the identity, with the same
@@ -105,20 +113,35 @@ export default function OpeningPage() {
         <div
           className={[
             "flex flex-col items-center px-6 text-center transition-all duration-500 ease-out",
+            // The artwork is letterboxed by object-contain, so the action is
+            // anchored to the viewport bottom rather than offset from centre —
+            // margin maths against an unknown letterbox lands it on the
+            // artwork's own tagline at some window sizes.
+            showArtworkOnly
+              ? "absolute inset-x-0 bottom-[6vh]"
+              : "relative",
             leaving ? "scale-90 opacity-0" : "scale-100 opacity-100",
           ].join(" ")}
         >
-          <CarewellMark className="rise h-20 w-20 text-navy sm:h-24 sm:w-24" />
-          <CarewellWordmark className="rise mt-5 text-[clamp(2.6rem,9vw,5rem)]" />
-          <p className="rise mt-5 text-[13px] tracking-[0.3em] text-ink-muted sm:text-sm">
-            טיפול אנושי. כל יום.
-          </p>
+          {/* Drawn only when the artwork isn't carrying the identity itself. */}
+          {!showArtworkOnly && (
+            <>
+              <CarewellMark className="rise h-20 w-20 text-navy sm:h-24 sm:w-24" />
+              <CarewellWordmark className="rise mt-5 text-[clamp(2.6rem,9vw,5rem)]" />
+              <p className="rise mt-5 text-[13px] tracking-[0.3em] text-ink-muted sm:text-sm">
+                טיפול אנושי. כל יום.
+              </p>
+            </>
+          )}
 
           <button
             type="button"
             onClick={enterWard}
             style={{ ["--d" as string]: 3 }}
-            className="rise mt-12 rounded-chip bg-navy px-8 py-3.5 text-[15px] font-semibold text-on-navy shadow-card transition-colors hover:bg-navy-deep"
+            className={[
+              "rise rounded-chip bg-navy px-8 py-3.5 text-[15px] font-semibold text-on-navy shadow-card transition-colors hover:bg-navy-deep",
+              showArtworkOnly ? "mt-0" : "mt-12",
+            ].join(" ")}
           >
             כניסה למחלקה
           </button>
