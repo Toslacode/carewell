@@ -117,11 +117,31 @@ export const TASK_PRIORITIES = [
 ] as const;
 export type TaskPriority = (typeof TASK_PRIORITIES)[number];
 
+/**
+ * Hebrew boundary guards. JavaScript's `\b` is defined over ASCII word
+ * characters, so `\bעכשיו\b` never matches — the boundary it looks for cannot
+ * exist next to a Hebrew letter. These lookarounds are the working equivalent
+ * and are used anywhere a Hebrew term must not match inside a longer word.
+ */
+const HB = "(?<![\\u0590-\\u05FF])";
+const HA = "(?![\\u0590-\\u05FF])";
+
 const PRIORITY_CUES: ReadonlyArray<readonly [TaskPriority, RegExp]> = [
-  ["urgent", /\b(עכשיו|מיד|מייד|דחוף|בדחיפות|תכף|כרגע|acute|stat)\b/],
+  [
+    "urgent",
+    new RegExp(`${HB}(עכשיו|מיד|מייד|דחוף|בדחיפות|תכף|כרגע)${HA}|\\b(acute|stat)\\b`),
+  ],
   ["before-discharge", /(לפני\s+ה?שחרור|לקראת\s+ה?שחרור|טרם\s+שחרור)/],
-  ["today", /(היום|הבוקר|אחר\s*ה?צהריים|הערב|הלילה|במהלך\s+היום)/],
-  ["scheduled", /(מחר|מחרתיים|בהמשך\s+השבוע|בעוד\s+\d|ביום\s+\S+|בשבוע\s+הבא)/],
+  [
+    "today",
+    new RegExp(`${HB}(היום|הבוקר|הערב|הלילה)${HA}|אחר\\s*ה?צהריים|במהלך\\s+היום`),
+  ],
+  [
+    "scheduled",
+    new RegExp(
+      `${HB}(מחר|מחרתיים)${HA}|בהמשך\\s+השבוע|בעוד\\s+\\d|ביום\\s+\\S+|בשבוע\\s+הבא`,
+    ),
+  ],
 ];
 
 /** Maps the timing phrase the doctor actually said to a workflow priority.
