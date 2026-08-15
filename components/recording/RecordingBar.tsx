@@ -178,7 +178,13 @@ export function RecordingBar({
       onPartial: setPartialText,
       onFinal: (text) => {
         setPartialText("");
-        finalRef.current = `${finalRef.current} ${text}`.trim();
+        // One line per settled utterance. A speech engine's utterance boundary
+        // is the only sentence boundary dictated Hebrew reliably gives us, and
+        // the extractor splits on it; joining with a space instead would hand
+        // the extractor one run-on sentence per round. It reads identically —
+        // the transcript is rendered in a paragraph, where the newline
+        // collapses back to a space.
+        finalRef.current = `${finalRef.current}\n${text}`.trim();
         setFinalText(finalRef.current);
         setTranscript(patient.id, finalRef.current);
         scheduleExtraction();

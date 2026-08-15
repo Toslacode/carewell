@@ -1,22 +1,66 @@
-import {
-  type Extraction,
-  ExtractionSchema,
-  emptyExtraction,
-} from "@/lib/schemas/clinical";
+/* ===========================================================================
+   The trust boundary — ported from lib/schemas/clinical.ts and lib/ai/rules.ts.
 
-/**
- * A deterministic Hebrew clinical extractor.
- *
- * This is the fallback whenever the Claude API is unavailable — no key, no
- * network, or a response that fails validation — and it is also what makes the
- * prototype demonstrable on a stage with no connectivity and reproducible
- * between runs.
- *
- * It is deliberately conservative. It recognises the phrasings doctors actually
- * use on a round and leaves everything else alone: a fragment it cannot place
- * goes to needsReview rather than being pushed into a clinical category on a
- * guess. Under-extracting is a nuisance; mis-filing a clinical finding is not.
- */
+   Two rules survive the port intact, because they are the reason this layer
+   exists at all:
+
+     · Priority is NEVER a model judgement. It is derived in code from the
+       timing words the doctor actually said.
+     · Content that cannot be placed confidently goes to needsReview. It is
+       never guessed into a clinical category and never dropped.
+
+   The preview runs the deterministic Hebrew extractor only. The application
+   itself calls the Claude API first (server-side, key never in the client) and
+   falls back to exactly this code when there is no key, no network, or a
+   response that fails validation — so what the preview shows is the real
+   fallback path, not a mock of it.
+   =========================================================================== */
+
+/** Hebrew boundary guards — JavaScript's \b is ASCII-only and never matches
+ *  beside a Hebrew letter, which silently breaks any /\bחום\b/-shaped rule. */
+const HB = "(?<![\\u0590-\\u05FF])";
+const HA = "(?![\\u0590-\\u05FF])";
+const heb = (body, flags) => new RegExp(`${HB}(?:${body})${HA}`, flags);
+
+const PRIORITY_CUES = [
+  ["urgent", new RegExp(`${HB}(עכשיו|מיד|מייד|דחוף|בדחיפות|תכף|כרגע)${HA}|\\b(acute|stat)\\b`)],
+  ["before-discharge", /(לפני\s+ה?שחרור|לקראת\s+ה?שחרור|טרם\s+שחרור)/],
+  ["today", new RegExp(`${HB}(היום|הבוקר|הערב|הלילה)${HA}|אחר\\s*ה?צהריים|במהלך\\s+היום`)],
+  ["scheduled", new RegExp(`${HB}(מחר|מחרתיים)${HA}|בהמשך\\s+השבוע|בעוד\\s+\\d|ביום\\s+\\S+|בשבוע\\s+הבא`)],
+];
+
+/** Timing words → priority. Silence means "unset", never a guess. */
+function derivePriority(timing) {
+  if (!timing) return "unset";
+  const t = String(timing).trim();
+  for (const [priority, cue] of PRIORITY_CUES) {
+    if (cue.test(t)) return priority;
+  }
+  return "unset";
+}
+
+function emptyExtraction() {
+  return {
+    chiefComplaint: [],
+    pastMedicalHistory: [],
+    socialStatus: [],
+    vitals: {
+      temperature: null,
+      bloodPressure: null,
+      heartRate: null,
+      spo2: null,
+      respiratoryRate: null,
+    },
+    tests: { physicalExam: [], labs: [], imaging: [], otherTests: [] },
+    workingDiagnosis: [],
+    treatmentPlan: [],
+    other: [],
+    tasks: [],
+    consultations: [],
+    discharge: { status: "unknown", blockers: [] },
+    needsReview: [],
+  };
+}
 
 /* ------------------------------------------------------------- normalising */
 
@@ -29,7 +73,7 @@ import {
  * whole round into a single clause, which then mis-files everything into
  * whichever categories the first cue words happened to open.
  */
-function normalise(raw: string): string {
+function normalise(raw) {
   return raw
     .replace(/[֑-ׇ]/g, "") // niqqud / cantillation
     .replace(/[״"]/g, '"')
@@ -39,47 +83,28 @@ function normalise(raw: string): string {
     .trim();
 }
 
-/**
- * Hebrew boundary guards — JavaScript's `\b` is ASCII-only and never matches
- * beside a Hebrew letter, which silently breaks any `\bחום\b`-shaped pattern.
- */
-const HB = "(?<![\\u0590-\\u05FF])";
-const HA = "(?![\\u0590-\\u05FF])";
-const heb = (body: string, flags?: string) =>
-  new RegExp(`${HB}(?:${body})${HA}`, flags);
-
 /** Verbs that start a new action when carrying a vav prefix: "נעשה צילום חזה
  *  ונחזור על ספירת דם" is two orders, not one. */
 const VAV_ACTION =
   /\s+(?=ו(?:נעשה|נבצע|נשלח|נזמין|נחזור|נתחיל|נמשיך|נוסיף|נפסיק|נשקול|נוריד|נעלה)(?![֐-׿]))/;
-
-export interface Clause {
-  text: string;
-  /** Timing named anywhere in the surrounding sentence. Splitting a compound
-   *  order must not strip the timing from its later halves — "נעשה צילום חזה
-   *  היום ונחזור על ספירת דם" schedules both for today. Carrying the phrase
-   *  across is grammar, not a clinical judgement, so it is safe to do. */
-  sentenceTiming: string | null;
-}
 
 const TIMING_RE = heb(
   "עכשיו|מיד|מייד|בדחיפות|דחוף|היום|הבוקר|הערב|הלילה|מחר\\s*בבוקר|מחר|מחרתיים|בהמשך\\s*השבוע",
 );
 const TIMING_PHRASE_RE = /לפני\s*ה?שחרור|אחר\s*ה?צהריים/;
 
-function timingIn(text: string): string | null {
-  return text.match(TIMING_PHRASE_RE)?.[0] ?? text.match(TIMING_RE)?.[0] ?? null;
+function timingIn(text) {
+  const phrase = text.match(TIMING_PHRASE_RE);
+  if (phrase) return phrase[0];
+  const word = text.match(TIMING_RE);
+  return word ? word[0] : null;
 }
 
 /** Splits speech into clauses. Doctors dictate in runs without punctuation, so
  *  conjunctions that reliably start a new statement are cut points too. */
-function clauses(text: string): Clause[] {
-  const sentences = text
-    .split(/[.;!?\n]+/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-
-  const out: Clause[] = [];
+function clauses(text) {
+  const sentences = text.split(/[.;!?\n]+/).map((s) => s.trim()).filter(Boolean);
+  const out = [];
   for (const sentence of sentences) {
     const sentenceTiming = timingIn(sentence);
     const parts = sentence
@@ -87,48 +112,38 @@ function clauses(text: string): Clause[] {
       .flatMap((p) => p.split(VAV_ACTION))
       .map((p) => p.trim())
       .filter((p) => p.length > 1);
-    for (const text of parts) out.push({ text, sentenceTiming });
+    for (const t of parts) out.push({ text: t, sentenceTiming });
   }
   return out;
 }
 
-const has = (text: string, re: RegExp) => re.test(text);
+const has = (text, re) => re.test(text);
 
 /* ------------------------------------------------------------------ vitals */
 
-function extractVitals(text: string, out: Extraction) {
-  const temp = text.match(
-    /(?<![֐-׿])חום\s*(?:של\s*|היה\s*|הגיע\s*ל\s*)?(\d{2}(?:[.,]\d)?)/,
-  );
+function extractVitals(text, out) {
+  const temp = text.match(/(?<![֐-׿])חום\s*(?:של\s*|היה\s*|הגיע\s*ל\s*)?(\d{2}(?:[.,]\d)?)/);
   if (temp) out.vitals.temperature = `${temp[1].replace(",", ".")}°C`;
 
-  const bp = text.match(
-    /לחץ\s*ה?דם\s*(?:הוא\s*|היה\s*|של\s*)?(\d{2,3})\s*(?:על|\/|\\)\s*(\d{2,3})/,
-  );
+  const bp = text.match(/לחץ\s*ה?דם\s*(?:הוא\s*|היה\s*|של\s*)?(\d{2,3})\s*(?:על|\/|\\)\s*(\d{2,3})/);
   if (bp) out.vitals.bloodPressure = `${bp[1]}/${bp[2]}`;
 
-  const hr = text.match(
-    /(?<![֐-׿])דופק\s*(?:של\s*|הוא\s*|היה\s*)?(\d{2,3})/,
-  );
+  const hr = text.match(/(?<![֐-׿])דופק\s*(?:של\s*|הוא\s*|היה\s*)?(\d{2,3})/);
   if (hr) out.vitals.heartRate = hr[1];
 
-  const spo2 = text.match(
-    /(?:סטורציה|סאטורציה|ריווי\s*חמצן|סאט)\s*(?:של\s*|הוא\s*|היא\s*)?(\d{2,3})\s*%?/,
-  );
+  const spo2 = text.match(/(?:סטורציה|סאטורציה|ריווי\s*חמצן|סאט)\s*(?:של\s*|הוא\s*|היא\s*)?(\d{2,3})\s*%?/);
   if (spo2) {
     const roomAir = has(text, /באוויר\s*חדר|ללא\s*חמצן/);
     out.vitals.spo2 = `${spo2[1]}%${roomAir ? " באוויר חדר" : ""}`;
   }
 
-  const rr = text.match(
-    /(?:קצב\s*נשימה|קצב\s*נשימות|נשימות\s*ל?דקה)\s*(?:של\s*|הוא\s*)?(\d{1,2})/,
-  );
+  const rr = text.match(/(?:קצב\s*נשימה|קצב\s*נשימות|נשימות\s*ל?דקה)\s*(?:של\s*|הוא\s*)?(\d{1,2})/);
   if (rr) out.vitals.respiratoryRate = rr[1];
 }
 
 /* -------------------------------------------------------- past medical hx  */
 
-const CONDITIONS: Array<[RegExp, string]> = [
+const CONDITIONS = [
   [/סוכרת|סכרת/, "סוכרת"],
   [/יתר\s*לחץ\s*דם|לחץ\s*דם\s*גבוה|יל"?ד/, "יתר לחץ דם"],
   [/\bCOPD\b|קופ"?ד|מחלת\s*ריאות\s*חסימתית/i, "COPD"],
@@ -147,10 +162,9 @@ const CONDITIONS: Array<[RegExp, string]> = [
   [/אנמיה/, "אנמיה"],
 ];
 
-const HISTORY_CUE =
-  /ברקע|רקע\s*של|סובל\s*מ|סובלת\s*מ|ידוע\s*(?:כ|על)|היסטוריה\s*של|מוכר\s*עם/;
+const HISTORY_CUE = /ברקע|רקע\s*של|סובל\s*מ|סובלת\s*מ|ידוע\s*(?:כ|על)|היסטוריה\s*של|מוכר\s*עם/;
 
-function extractHistory(clause: string, out: Extraction) {
+function extractHistory(clause, out) {
   if (!has(clause, HISTORY_CUE)) return;
   for (const [pattern, label] of CONDITIONS) {
     if (pattern.test(clause)) out.pastMedicalHistory.push(label);
@@ -159,13 +173,10 @@ function extractHistory(clause: string, out: Extraction) {
 
 /* ----------------------------------------------------------------- social  */
 
-const SOCIAL_RULES: Array<[RegExp, string | ((m: RegExpMatchArray) => string)]> = [
+const SOCIAL_RULES = [
   [/גר\s*לבד|גרה\s*לבד|חי\s*לבד/, "גר לבד"],
   [/גר\s*עם\s*(אשתו|בעלה|בתו|בנו|משפחתו|בת\s*זוגו|בן\s*זוגה)/, (m) => `גר עם ${m[1]}`],
-  [
-    /(?:ה?בת|בתו)\s*(?:שלו|שלה)?\s*(?:עוזרת|מסייעת|מטפלת)/,
-    "בתו מסייעת לו",
-  ],
+  [/(?:ה?בת|בתו)\s*(?:שלו|שלה)?\s*(?:עוזרת|מסייעת|מטפלת)/, "בתו מסייעת לו"],
   [/(?:ה?בן|בנו)\s*(?:שלו|שלה)?\s*(?:עוזר|מסייע|מטפל)/, "בנו מסייע לו"],
   [/עצמאי\s*(?:בתפקודי|ב)?|עצמאית\s*(?:בתפקודי|ב)?/, "עצמאי בתפקודי יום יום"],
   [/נעזר\s*ב?מטפל|מטפלת\s*צמודה|עובד\s*זר/, "נעזר במטפל"],
@@ -177,7 +188,7 @@ const SOCIAL_RULES: Array<[RegExp, string | ((m: RegExpMatchArray) => string)]> 
   [/מרותק\s*למיטה|מרותקת\s*למיטה/, "מרותק למיטה"],
 ];
 
-function extractSocial(clause: string, out: Extraction) {
+function extractSocial(clause, out) {
   for (const [pattern, label] of SOCIAL_RULES) {
     const m = clause.match(pattern);
     if (m) out.socialStatus.push(typeof label === "function" ? label(m) : label);
@@ -186,7 +197,7 @@ function extractSocial(clause: string, out: Extraction) {
 
 /* ---------------------------------------------------------------- symptoms */
 
-const SYMPTOMS: Array<[RegExp, string]> = [
+const SYMPTOMS = [
   [/משתעל|משתעלת|שיעול/, "שיעול מתמשך"],
   [/קוצר\s*נשימה|קשה\s*לו\s*לנשום|מתנשם/, "קוצר נשימה"],
   [/כאב\s*בחזה|כאבים\s*בחזה/, "כאב בחזה"],
@@ -202,12 +213,10 @@ const SYMPTOMS: Array<[RegExp, string]> = [
 
 const RESOLVED_CUE = /חלף|נעלם|הסתדר|ללא\s|אין\s|שיפור\s*ב/;
 
-function extractSymptoms(clause: string, out: Extraction) {
+function extractSymptoms(clause, out) {
   // "עדיין משתעל" and "כבר לא משתעל" are opposite claims; only the first is a
   // current complaint, so a negation nearby suppresses the match.
-  if (has(clause, /\bלא\s|אינו\s|אינה\s/) && !has(clause, /עדיין|ממשיך|נמשך/)) {
-    return;
-  }
+  if (has(clause, /\bלא\s|אינו\s|אינה\s/) && !has(clause, /עדיין|ממשיך|נמשך/)) return;
   if (has(clause, RESOLVED_CUE) && !has(clause, /עדיין|ממשיך/)) return;
 
   for (const [pattern, label] of SYMPTOMS) {
@@ -217,23 +226,20 @@ function extractSymptoms(clause: string, out: Extraction) {
 
 /* ------------------------------------------------------------------- tests */
 
-const IMAGING = /צילום\s*חזה|צילום|\bCT\b|סי\s*טי|סיטי|\bMRI\b|אם\s*אר\s*איי|אולטרסאונד|\bUS\b|דופלר|אקו(?:\s*לב)?|מיפוי|MRCP/i;
+const IMAGING =
+  /צילום\s*חזה|צילום|\bCT\b|סי\s*טי|סיטי|\bMRI\b|אם\s*אר\s*איי|אולטרסאונד|\bUS\b|דופלר|אקו(?:\s*לב)?|מיפוי|MRCP/i;
 const LABS =
   /ספירת\s*דם|כימיה|תפקודי\s*כבד|תפקודי\s*כליה|קריאטינין|אלקטרוליטים|\bCRP\b|תרבית|גזים\s*בדם|\bINR\b|המוגלובין|נתרן|אשלגן|סוכר\s*בדם|ליפאז|בילירובין|\bBNP\b|טרופונין/i;
-const OTHER_TESTS =
-  /\bECG\b|אק"?ג|אקג|הולטר|ספירומטריה|בדיקת\s*בליעה|בדיקה\s*נוירולוגית|קרקעית\s*עין/i;
+const OTHER_TESTS = /\bECG\b|אק"?ג|אקג|הולטר|ספירומטריה|בדיקת\s*בליעה|בדיקה\s*נוירולוגית|קרקעית\s*עין/i;
 
-const EXAM_CUE =
-  /בבדיקה|בבדיקה\s*גופנית|בהאזנה|נשמע|נשמעים|במישוש|רגישות\s*ב|חרחורים|צפצופים|אוושה/;
-
+const EXAM_CUE = /בבדיקה|בבדיקה\s*גופנית|בהאזנה|נשמע|נשמעים|במישוש|רגישות\s*ב|חרחורים|צפצופים|אוושה/;
 const PLAN_CUE =
   /נעשה|נבצע|נשלח|נזמין|נחזור\s*על|נמשיך|נתחיל|נוסיף|נוריד|נפסיק|יש\s*לבצע|יש\s*לשלוח|צריך\s*ל|לבצע|לשלוח|להזמין|נשקול/;
-
 const REPEAT_CUE = /נחזור\s*על|חוזר|חוזרת|שוב|בשנית/;
 
 /** Pulls the test name out of an action clause, dropping the verb and timing so
  *  the resulting task title is what a doctor would write on the sheet. */
-function testPhrase(clause: string): string | null {
+function testPhrase(clause) {
   const cleaned = clause
     .replace(
       /^(?:אז\s*)?ו?(?:נעשה|נבצע|נשלח|נזמין|נחזור\s*על|יש\s*לבצע|יש\s*לשלוח|צריך\s*לבצע|צריך\s*לשלוח|לבצע|לשלוח|להזמין|נשקול)\s*/,
@@ -249,25 +255,25 @@ function testPhrase(clause: string): string | null {
   return cleaned.length > 1 ? cleaned : null;
 }
 
-function categoryOf(phrase: string): "imaging" | "labs" | "consult" | "other" {
+function categoryOf(phrase) {
   if (IMAGING.test(phrase)) return "imaging";
   if (LABS.test(phrase)) return "labs";
   return "other";
 }
 
-function extractTestsAndPlan({ text: clause, sentenceTiming }: Clause, out: Extraction) {
-  if (has(clause, EXAM_CUE)) {
-    out.tests.physicalExam.push(clause.replace(/^בבדיקה\s*(?:גופנית\s*)?/, "").trim());
+function extractTestsAndPlan(clause, out) {
+  const text = clause.text;
+  if (has(text, EXAM_CUE)) {
+    out.tests.physicalExam.push(text.replace(/^בבדיקה\s*(?:גופנית\s*)?/, "").trim());
     return;
   }
+  if (!has(text, PLAN_CUE)) return;
 
-  if (!has(clause, PLAN_CUE)) return;
-
-  const phrase = testPhrase(clause);
+  const phrase = testPhrase(text);
   if (!phrase) return;
 
-  const timing = sentenceTiming;
-  const repeat = has(clause, REPEAT_CUE);
+  const timing = clause.sentenceTiming;
+  const repeat = has(text, REPEAT_CUE);
 
   if (IMAGING.test(phrase)) {
     out.tests.imaging.push(repeat ? `${phrase} חוזר` : `${phrase} מתוכנן`);
@@ -280,12 +286,7 @@ function extractTestsAndPlan({ text: clause, sentenceTiming }: Clause, out: Extr
   // The plan keeps the doctor's own phrasing including timing; the task is the
   // bare actionable noun.
   out.treatmentPlan.push(timing ? `${phrase} ${timing}` : phrase);
-
-  if (IMAGING.test(phrase) || LABS.test(phrase) || OTHER_TESTS.test(phrase)) {
-    out.tasks.push({ title: phrase, timing, category: categoryOf(phrase) });
-  } else {
-    out.tasks.push({ title: phrase, timing, category: "other" });
-  }
+  out.tasks.push({ title: phrase, timing, category: categoryOf(phrase) });
 }
 
 /* ------------------------------------------------------- working diagnosis */
@@ -293,13 +294,10 @@ function extractTestsAndPlan({ text: clause, sentenceTiming }: Clause, out: Extr
 const DIAGNOSIS_CUE =
   /כנראה|ככל\s*הנראה|חשד\s*ל|נראה\s*כמו|מדובר\s*ב|האבחנה\s*היא|אבחנה\s*מבדלת|להערכתי/;
 
-function extractDiagnosis(clause: string, out: Extraction) {
+function extractDiagnosis(clause, out) {
   if (!has(clause, DIAGNOSIS_CUE)) return;
   const phrase = clause
-    .replace(
-      /^.*?(?:כנראה|ככל\s*הנראה|חשד\s*ל|נראה\s*כמו|מדובר\s*ב|האבחנה\s*היא|להערכתי)\s*/,
-      "",
-    )
+    .replace(/^.*?(?:כנראה|ככל\s*הנראה|חשד\s*ל|נראה\s*כמו|מדובר\s*ב|האבחנה\s*היא|להערכתי)\s*/, "")
     .trim();
   if (phrase.length < 2) return;
   // Hedged speech becomes an explicitly hedged diagnosis, not a firm one.
@@ -312,7 +310,7 @@ function extractDiagnosis(clause: string, out: Extraction) {
 const MED_CUE =
   /נתחיל|ניתן|נמשיך|נפסיק|נוריד|נעלה|מינון|אנטיביוטיקה|סטרואידים|משתן|פוסיד|אינהלציות|נוזלים|חמצן/;
 
-function extractTreatment(clause: string, out: Extraction) {
+function extractTreatment(clause, out) {
   if (!has(clause, MED_CUE)) return;
   if (has(clause, PLAN_CUE) && (IMAGING.test(clause) || LABS.test(clause))) return;
   const phrase = clause.replace(/^(?:אז\s*)?/, "").trim();
@@ -321,7 +319,7 @@ function extractTreatment(clause: string, out: Extraction) {
 
 /* ------------------------------------------------------------- consultants */
 
-const SPECIALTIES: Array<[RegExp, string]> = [
+const SPECIALTIES = [
   [/קרדיולוג|קרדיולוגיה|רופא\s*לב/, "קרדיולוגיה"],
   [/ריאות|פולמונולוג|ריאתי/, "ריאות"],
   [/נפרולוג|נפרולוגיה|כליות/, "נפרולוגיה"],
@@ -338,23 +336,20 @@ const SPECIALTIES: Array<[RegExp, string]> = [
 
 const CONSULT_CUE = /ייעוץ|יעוץ|נזמין|נבקש|להזמין|נתייעץ|יבוא\s*לראות|הערכת/;
 
-function extractConsults({ text: clause, sentenceTiming }: Clause, out: Extraction) {
-  if (!has(clause, CONSULT_CUE)) return;
+function extractConsults(clause, out) {
+  const text = clause.text;
+  if (!has(text, CONSULT_CUE)) return;
   for (const [pattern, specialty] of SPECIALTIES) {
-    if (pattern.test(clause)) {
+    if (pattern.test(text)) {
       out.consultations.push({ specialty, reason: null });
-      out.tasks.push({
-        title: `ייעוץ ${specialty}`,
-        timing: sentenceTiming,
-        category: "consult",
-      });
+      out.tasks.push({ title: `ייעוץ ${specialty}`, timing: clause.sentenceTiming, category: "consult" });
     }
   }
 }
 
 /* --------------------------------------------------------------- discharge */
 
-function extractDischarge(clause: string, out: Extraction) {
+function extractDischarge(clause, out) {
   if (!has(clause, /שחרור|לשחרר|משחררים|הביתה/)) return;
 
   if (has(clause, /לא\s*משחררים|לא\s*לשחרר|אין\s*שחרור|רחוק\s*משחרור/)) {
@@ -365,11 +360,8 @@ function extractDischarge(clause: string, out: Extraction) {
     out.discharge.status = "today";
   }
 
-  // "ממתין ל-X", "לפני השחרור צריך X" — the thing standing in the way.
-  const blocker = clause.match(
-    /(?:ממתין|ממתינים|מחכים)\s*ל[־\s]*(.+?)(?:$|\s+(?:ואז|אחר\s*כך))/,
-  );
-  if (blocker?.[1]) out.discharge.blockers.push(`ממתין ל${blocker[1].trim()}`);
+  const blocker = clause.match(/(?:ממתין|ממתינים|מחכים)\s*ל[־\s]*(.+?)(?:$|\s+(?:ואז|אחר\s*כך))/);
+  if (blocker && blocker[1]) out.discharge.blockers.push(`ממתין ל${blocker[1].trim()}`);
 
   if (has(clause, /אם\s*יהיה\s*שיפור|בהתאם\s*לשיפור|תלוי\s*ב/)) {
     out.discharge.blockers.push("שיפור קליני");
@@ -379,33 +371,29 @@ function extractDischarge(clause: string, out: Extraction) {
 /* ------------------------------------------------------------- uncertainty */
 
 /** A lab or vital named next to something that isn't a parseable number. This
- *  is the case where guessing is genuinely dangerous, so it is flagged instead. */
+ *  is where guessing is genuinely dangerous, so it is flagged instead. */
 /** Trailing guard only, and deliberately so: Hebrew prefixes attach to the noun
  *  ("הקריאטינין" is still creatinine), but a Hebrew suffix makes a different
- *  word entirely — "סוכר" is sugar, "סוכרת" is diabetes. Without the guard,
- *  "ברקע סוכרת" gets flagged as an unreadable glucose value. */
+ *  word entirely — "סוכר" is sugar, "סוכרת" is diabetes. */
 const NAMED_VALUE_RE = new RegExp(
   `(קריאטינין|נתרן|אשלגן|המוגלובין|סוכר|לחץ\\s*דם|חום|דופק|סטורציה)${HA}\\s*(?:הוא|היה|של)?\\s*([^\\s]{0,12})`,
 );
 
-function extractUncertain(clause: string, out: Extraction) {
+function extractUncertain(clause, out) {
   const namedValue = clause.match(NAMED_VALUE_RE);
   if (!namedValue) return;
   const value = namedValue[2] ?? "";
   if (/\d/.test(value)) return; // a number was found — nothing uncertain here
   if (!value || /^(תקין|תקינה|בסדר|יציב|טוב|נמוך|גבוה|ירד|עלה)/.test(value)) return;
 
-  out.needsReview.push({
-    text: clause,
-    reason: `ערך ${namedValue[1]} לא ברור בתמלול`,
-  });
+  out.needsReview.push({ text: clause, reason: `ערך ${namedValue[1]} לא ברור בתמלול` });
 }
 
 /* -------------------------------------------------------------------- main */
 
-export function extractByRules(transcript: string): Extraction {
+function extractByRules(transcript) {
   const out = emptyExtraction();
-  const text = normalise(transcript);
+  const text = normalise(transcript || "");
   if (!text) return out;
 
   extractVitals(text, out);
@@ -422,8 +410,7 @@ export function extractByRules(transcript: string): Extraction {
     extractUncertain(clause.text, out);
   }
 
-  // Within-run dedupe; the store dedupes against existing record content too.
-  const uniq = (arr: string[]) => Array.from(new Set(arr.map((s) => s.trim())));
+  const uniq = (arr) => Array.from(new Set(arr.map((s) => s.trim())));
   out.chiefComplaint = uniq(out.chiefComplaint);
   out.pastMedicalHistory = uniq(out.pastMedicalHistory);
   out.socialStatus = uniq(out.socialStatus);
@@ -436,7 +423,7 @@ export function extractByRules(transcript: string): Extraction {
   out.tests.otherTests = uniq(out.tests.otherTests);
   out.discharge.blockers = uniq(out.discharge.blockers);
 
-  const seenTasks = new Set<string>();
+  const seenTasks = new Set();
   out.tasks = out.tasks.filter((t) => {
     const key = t.title.trim().toLowerCase();
     if (seenTasks.has(key)) return false;
@@ -444,14 +431,12 @@ export function extractByRules(transcript: string): Extraction {
     return true;
   });
 
-  const seenConsults = new Set<string>();
+  const seenConsults = new Set();
   out.consultations = out.consultations.filter((c) => {
     if (seenConsults.has(c.specialty)) return false;
     seenConsults.add(c.specialty);
     return true;
   });
 
-  // Round-trip through the schema so the fallback is held to exactly the same
-  // contract as the model — same trust boundary, no exceptions.
-  return ExtractionSchema.parse(out);
+  return out;
 }
