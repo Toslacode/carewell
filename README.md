@@ -61,3 +61,17 @@ restraint over enterprise-hospital density.
 Motion communicates navigation and state — entering a room, new extracted
 information, a task changing status — and never decorates. Everything honors
 `prefers-reduced-motion`.
+
+## Deploying
+
+Vercel auto-detects the Next.js app; no configuration is required.
+
+Nothing here costs money to run. `ANTHROPIC_API_KEY` is deliberately left unset
+on the hosted build, so `/api/extract` and `/api/assistant` answer 503 and the
+client falls back to the deterministic Hebrew engines — the same flow, no API
+spend. Setting the key later upgrades both without any other change.
+
+Live Hebrew transcription needs a secure context and a microphone, which means
+the deployed URL or `localhost` — not an embedded frame. A cross-origin iframe
+without `allow="microphone"` is denied by the permissions policy, and the engine
+picker reports that in place rather than failing silently.
