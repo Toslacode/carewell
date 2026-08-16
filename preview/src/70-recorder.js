@@ -7,12 +7,13 @@
    ״אישור סבב״. And it never claims to be transcribing when it isn't — every
    failure mode has its own visible state rather than a silent stall.
 
-   In this embedded preview the browser-engine option is offered exactly as the
-   application offers it, and if the sandbox refuses microphone access the real
-   error state appears. The scripted engine is the default here and is labelled
-   as scripted wherever it shows, because a demo that looks like live
-   transcription but isn't would be exactly the dishonesty this product cannot
-   afford.
+   The browser engine (Web Speech, he-IL) is the default here exactly as it is
+   in the application: this file is the application, not a mock of it. If the
+   embedding frame refuses microphone access, the real error state appears with
+   the real remedy, and the scripted engine stays available as an explicit
+   testing mode — labelled as such wherever it shows, because a demo that looks
+   like live transcription but isn't is exactly the dishonesty this product
+   cannot afford.
    =========================================================================== */
 
 /** How long after speech settles before the transcript is sent for structuring.
@@ -23,7 +24,7 @@ const EXTRACT_DEBOUNCE_MS = 2200;
 const rec = {
   phase: "idle", // idle | preparing | ready | recording | paused | structuring | review | failed
   patientId: null,
-  engineId: "demo",
+  engineId: "web-speech",
   seconds: 0,
   level: 0,
   finalText: "",
@@ -55,8 +56,9 @@ const SCRIPT = [
 class DemoProvider {
   constructor() {
     this.id = "demo";
-    this.label = "הדגמה מוקלטת מראש";
-    this.description = "טקסט קבוע מראש להדגמה ללא מיקרופון. אינו מתמלל דיבור אמיתי.";
+    this.label = "מצב בדיקה — תמליל קבוע";
+    this.description =
+      "מריץ תמליל כתוב מראש בלי לגעת במיקרופון. אינו מתמלל דיבור — לבדיקת הזרימה בלבד, ולא לסבב אמיתי.";
     this.onDevice = true;
     this.events = {};
     this.timers = [];
@@ -196,15 +198,16 @@ class WebSpeechProvider {
     };
     r.onerror = (e) => {
       if (e.error === "no-speech" || e.error === "aborted") return;
-      this.events.onError &&
-        this.events.onError({
-          code: e.error === "not-allowed" ? "permission-denied" : "unknown",
-          message:
-            e.error === "not-allowed"
-              ? "הגישה למיקרופון נחסמה. יש לאשר גישה בהגדרות הדפדפן ולנסות שוב."
-              : "התמלול נעצר. נסו שוב.",
-          retryable: true,
-        });
+      // Each failure gets its own sentence, because they need different
+      // answers: a permission dialog, a different browser, or a retry.
+      const map = {
+        "not-allowed": ["permission-denied", "הגישה למיקרופון נחסמה. יש לאשר גישה בהגדרות הדפדפן ולנסות שוב.", true],
+        "service-not-allowed": ["not-supported", "מנוע התמלול של הדפדפן אינו זמין בבנייה הזו של הדפדפן. נסו Chrome או Edge רגילים.", false],
+        "language-not-supported": ["not-supported", "הדפדפן הזה אינו תומך בתמלול עברית.", false],
+        network: ["network", "מנוע התמלול של הדפדפן אינו זמין כרגע. בדקו את החיבור.", true],
+      };
+      const [code, message, retryable] = map[e.error] || ["unknown", "התמלול נעצר.", true];
+      this.events.onError && this.events.onError({ code, message, retryable });
       this.events.onStatus && this.events.onStatus("error");
     };
     // Chrome ends the session after a silence; restart so a round can run as
@@ -328,6 +331,73 @@ function listEngines() {
   });
 }
 
+/* ------------------------------------------------------- what is possible --*/
+
+/**
+ * What can this environment actually do with a microphone?
+ *
+ * Live transcription has four separate ways to be impossible, and they need
+ * different answers from the person in front of the screen: an insecure page, a
+ * browser with no recogniser, a frame denied the permission, or a refusal by
+ * the user. A single "microphone unavailable" would be true and useless.
+ *
+ * Deliberately passive — it never calls getUserMedia, so it never raises a
+ * prompt nobody asked for. Pressing record is still the definitive test; this
+ * only says in advance whether pressing it can possibly work here.
+ */
+function probeMicrophone() {
+  const framed = window.self !== window.top;
+
+  if (!window.isSecureContext || !(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) {
+    return {
+      ready: false,
+      message: "הדפדפן חוסם מיקרופון בעמוד שאינו מאובטח.",
+      remedy: "יש לפתוח את האפליקציה בכתובת https או ב־localhost.",
+      framed,
+    };
+  }
+
+  if (!speechCtor()) {
+    return {
+      ready: false,
+      message: "הדפדפן הזה אינו כולל מנוע תמלול חי.",
+      remedy: "תמלול עברית חי נתמך ב־Chrome, Edge וספארי. אפשר גם לבחור מנוע אחר.",
+      framed,
+    };
+  }
+
+  // Safari and Firefox expose no permissions policy; absence of an answer is
+  // not an answer, so we do not claim the frame is blocked when we cannot tell.
+  let framePermits = null;
+  if (document.featurePolicy && typeof document.featurePolicy.allowsFeature === "function") {
+    try {
+      framePermits = document.featurePolicy.allowsFeature("microphone");
+    } catch {
+      framePermits = null;
+    }
+  }
+
+  if (framed && framePermits === false) {
+    return {
+      ready: false,
+      message: "התצוגה המוטמעת הזו חסומה לגישה למיקרופון.",
+      remedy:
+        "יש לפתוח את הדף בכרטיסייה נפרדת כדי לאשר מיקרופון ולהקליט בקול אמיתי. עד אז אפשר לבחור ״מצב בדיקה״ ולראות את הזרימה על תמליל קבוע.",
+      framed,
+    };
+  }
+
+  return {
+    ready: true,
+    message: "מיקרופון זמין — לחצו ״התחל סבב״ ואשרו את בקשת ההרשאה.",
+    remedy: null,
+    framed,
+  };
+}
+
+let micCapability = null;
+const mic = () => (micCapability ??= probeMicrophone());
+
 /* ------------------------------------------------------------------- bar --*/
 
 function stateLabel(phase) {
@@ -390,7 +460,14 @@ function recordingBar(p) {
       ? `<div class="notices">
           ${
             rec.error
-              ? `<p class="notice ${rec.error.code === "no-audio" ? "warn" : "err"}" role="alert">${I.alert(iconStyle(16))}<span>${esc(rec.error.message)}</span>${
+              ? `<p class="notice ${rec.error.code === "no-audio" ? "warn" : "err"}" role="alert">${I.alert(iconStyle(16))}<span>${esc(rec.error.message)}${
+                  // A denial inside an embed is not the reader's mistake and is
+                  // not fixable from the browser's permission dialog — say
+                  // where it can be fixed instead of only that it failed.
+                  rec.error.code === "permission-denied" && mic().remedy
+                    ? `<span class="remedy">${esc(mic().remedy)}</span>`
+                    : ""
+                }</span>${
                   rec.error.retryable && phase === "failed" ? `<button data-rec="begin">נסו שוב</button>` : ""
                 }</p>`
               : ""
@@ -406,7 +483,12 @@ function recordingBar(p) {
         <button class="engine-btn" data-rec="engines" aria-expanded="${state.enginePickerOpen}">מנוע תמלול${I.chevronDown(iconStyle(16))}</button>
         ${
           state.enginePickerOpen
-            ? `<ul class="engine-menu">${engines
+            ? `<div class="engine-menu">
+                <p class="env ${mic().ready ? "ok" : "blocked"}">
+                  ${mic().ready ? I.check(iconStyle(16)) : I.alert(iconStyle(16))}
+                  <span>${esc(mic().message)}${mic().remedy ? `<span class="remedy">${esc(mic().remedy)}</span>` : ""}</span>
+                </p>
+                <ul>${engines
                 .map(
                   (e) => `<li><button class="${e.id === rec.engineId ? "on" : ""}" ${e.supported ? `data-engine="${e.id}"` : "disabled"}>
                     <span class="name">${esc(e.label)}${e.id === rec.engineId ? I.check('style="width:16px;height:16px;color:var(--navy)"') : ""}
@@ -419,7 +501,8 @@ function recordingBar(p) {
                     <span class="desc">${esc(e.supported ? e.description : "אינו נתמך בדפדפן הזה.")}</span>
                   </button></li>`,
                 )
-                .join("")}</ul>`
+                .join("")}</ul>
+              </div>`
             : ""
         }
       </div>

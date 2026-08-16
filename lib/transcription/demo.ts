@@ -26,9 +26,9 @@ const SCRIPT: Array<{ text: string; delay: number }> = [
 
 export class DemoProvider implements TranscriptionProvider {
   readonly id = "demo";
-  readonly label = "הדגמה מוקלטת מראש";
+  readonly label = "מצב בדיקה — תמליל קבוע";
   readonly description =
-    "טקסט קבוע מראש להדגמה ללא מיקרופון. אינו מתמלל דיבור אמיתי.";
+    "מריץ תמליל כתוב מראש בלי לגעת במיקרופון. אינו מתמלל דיבור — לבדיקת הזרימה בלבד, ולא לסבב אמיתי.";
   readonly onDevice = true;
 
   private events: TranscriptionEvents = {};

@@ -167,8 +167,19 @@ export class WebSpeechProvider implements TranscriptionProvider {
         this.events.onStatus?.("error");
         return;
       }
+      if (event.error === "service-not-allowed" || event.error === "language-not-supported") {
+        this.events.onError?.(
+          transcriptionError(
+            "not-supported",
+            "מנוע התמלול של הדפדפן אינו זמין בבנייה הזו של הדפדפן. נסו Chrome או Edge רגילים, או עברו למנוע מקומי.",
+            false,
+          ),
+        );
+        this.events.onStatus?.("error");
+        return;
+      }
       this.events.onError?.(
-        transcriptionError("unknown", "אירעה שגיאה בתמלול. נסו שוב."),
+        transcriptionError("unknown", "התמלול נעצר."),
       );
     };
 

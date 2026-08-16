@@ -20,6 +20,7 @@ import {
   type ExtractionEngine,
   extract,
 } from "@/lib/ai/extract";
+import { type MicCapability, probeMicrophone } from "@/lib/transcription/capability";
 import { Waveform } from "@/components/recording/Waveform";
 import { Button, IconButton } from "@/components/ui/primitives";
 import {
@@ -79,6 +80,10 @@ export function RecordingBar({
   );
   const [engineId, setEngineId] = useState<EngineId>(DEFAULT_ENGINE);
   const [engines, setEngines] = useState<EngineOption[]>([]);
+  /** What this environment permits, probed once without prompting for
+   *  permission. Reported in the picker so the reader is never left guessing
+   *  why the record button does nothing. */
+  const [mic, setMic] = useState<MicCapability | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [modelProgress, setModelProgress] = useState<number | null>(null);
   const [error, setError] = useState<TranscriptionError | null>(null);
@@ -98,7 +103,10 @@ export function RecordingBar({
 
   const isDraft = patient.draftClinicalData !== null;
 
-  useEffect(() => setEngines(listEngines()), []);
+  useEffect(() => {
+    setEngines(listEngines());
+    setMic(probeMicrophone());
+  }, []);
 
   useEffect(() => onPhaseChange?.(phase), [phase, onPhaseChange]);
 
@@ -275,7 +283,15 @@ export function RecordingBar({
                 )}
               >
                 <IconAlert className="mt-px h-4 w-4 shrink-0" />
-                <span>{error.message}</span>
+                <span>
+                  {error.message}
+                  {/* A denial inside an embed is not the reader's mistake and
+                      not fixable from the browser's permission dialog — say
+                      where it can be fixed instead of only that it failed. */}
+                  {mic?.remedy && error.code === "permission-denied" && (
+                    <span className="mt-1 block text-ink-muted">{mic.remedy}</span>
+                  )}
+                </span>
                 {error.retryable && phase === "failed" && (
                   <button
                     type="button"
@@ -392,6 +408,7 @@ export function RecordingBar({
               <>
                 <EnginePicker
                   engines={engines}
+                  mic={mic}
                   value={engineId}
                   open={pickerOpen}
                   onToggle={() => setPickerOpen((v) => !v)}
@@ -551,12 +568,14 @@ function MicButton({
 
 function EnginePicker({
   engines,
+  mic,
   value,
   open,
   onToggle,
   onSelect,
 }: {
   engines: EngineOption[];
+  mic: MicCapability | null;
   value: EngineId;
   open: boolean;
   onToggle: () => void;
@@ -575,7 +594,26 @@ function EnginePicker({
       </button>
 
       {open && (
-        <ul className="absolute bottom-full end-0 z-40 mb-2 w-[min(320px,calc(100vw-3rem))] overflow-hidden rounded-card border border-line bg-card shadow-lift">
+        <div className="absolute bottom-full end-0 z-40 mb-2 w-[min(340px,calc(100vw-3rem))] overflow-hidden rounded-card border border-line bg-card shadow-lift">
+          {mic && (
+            <p
+              className={cn(
+                "flex items-start gap-2 border-b border-line px-4 py-3 text-[12px] leading-relaxed",
+                mic.ready ? "bg-stable-bg text-stable" : "bg-attention-bg text-attention",
+              )}
+            >
+              {mic.ready ? (
+                <IconCheck className="mt-px h-4 w-4 shrink-0" />
+              ) : (
+                <IconAlert className="mt-px h-4 w-4 shrink-0" />
+              )}
+              <span>
+                {mic.message}
+                {mic.remedy && <span className="mt-1 block text-ink-muted">{mic.remedy}</span>}
+              </span>
+            </p>
+          )}
+          <ul>
           {engines.map((engine) => (
             <li key={engine.id}>
               <button
@@ -614,7 +652,8 @@ function EnginePicker({
               </button>
             </li>
           ))}
-        </ul>
+          </ul>
+        </div>
       )}
     </div>
   );

@@ -1536,6 +1536,7 @@ main.bare { padding: 0; }
 .rec .notice.err { color: var(--urgent); }
 .rec .notice.warn { color: var(--attention); }
 .rec .notice.info { color: var(--ink-muted); }
+.rec .notice .remedy { display: block; margin-top: 4px; color: var(--ink-muted); }
 .rec .notice button { border: 0; background: none; padding: 0; font-weight: 600; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; color: inherit; }
 .rec .strip { display: flex; flex-direction: column; gap: 12px; padding: 14px; }
 @media (min-width: 640px) { .rec .strip { flex-direction: row; align-items: center; gap: 16px; padding: 16px; } }
@@ -1628,6 +1629,21 @@ main.bare { padding: 0; }
   background: var(--card);
   box-shadow: var(--shadow-lift);
 }
+/* What this environment permits, stated before the list of engines — so nobody
+   picks the live engine and then wonders why the button does nothing. */
+.engine-menu .env {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+  padding: 12px 16px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.engine-menu .env.ok { background: var(--stable-bg); color: var(--stable); }
+.engine-menu .env.blocked { background: var(--attention-bg); color: var(--attention); }
+.engine-menu .env .remedy { display: block; margin-top: 4px; color: var(--ink-muted); }
+
 .engine-menu button {
   display: flex;
   width: 100%;
