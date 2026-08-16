@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { AppFooter, AppHeader } from "@/components/layout/AppHeader";
+import { AppFooter } from "@/components/layout/TopBar";
 import { EmptyState, StatusPill } from "@/components/ui/primitives";
 import {
   IconCheck,
@@ -52,6 +52,7 @@ export default function TasksPage() {
   const rows = useMemo<Row[]>(() => {
     const byId = new Map(rooms.map((r) => [r.id, r.number]));
     return Object.values(patients)
+      .filter((patient) => !patient.dischargedAt)
       .flatMap((patient) =>
         patient.tasks.map((task) => ({
           task,
@@ -73,7 +74,8 @@ export default function TasksPage() {
       Object.values(patients)
         .filter(
           (p) =>
-            p.discharge.status === "today" || p.discharge.status === "tomorrow",
+            !p.dischargedAt &&
+            (p.discharge.status === "today" || p.discharge.status === "tomorrow"),
         )
         .sort((a, b) => a.name.localeCompare(b.name, "he")),
     [patients],
@@ -116,8 +118,6 @@ export default function TasksPage() {
 
   return (
     <>
-      <AppHeader back={{ href: "/rooms", label: "חזרה לחדרים" }} />
-
       <main id="main" className="px-4 pb-4 pt-6 sm:px-6">
         <div className="mx-auto max-w-ward">
           <h1 className="text-[32px] font-bold tracking-tight text-navy-deep sm:text-[38px]">

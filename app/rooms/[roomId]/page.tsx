@@ -1,13 +1,17 @@
 "use client";
 
-import { use } from "react";
-import { AppFooter, AppHeader } from "@/components/layout/AppHeader";
+import { use, useState } from "react";
+import { useRouter } from "next/navigation";
+import { AppFooter } from "@/components/layout/TopBar";
 import { PatientCard } from "@/components/patients/PatientCard";
+import { PatientForm } from "@/components/patients/PatientForm";
 import { Card, EmptyState } from "@/components/ui/primitives";
 import {
+  IconArrowBack,
   IconClipboard,
   IconDoor,
   IconHeart,
+  IconPlus,
   IconUser,
 } from "@/components/ui/icons";
 import { patientCount } from "@/lib/labels";
@@ -26,13 +30,15 @@ export default function RoomPage({
   params: Promise<{ roomId: string }>;
 }) {
   const { roomId } = use(params);
-  const { getRoom, roomPatients, patients } = useWard();
+  const router = useRouter();
+  const { getRoom, roomPatients, roomDischarged, patients, admitPatient } =
+    useWard();
+  const [admitting, setAdmitting] = useState(false);
   const room = getRoom(roomId);
 
   if (!room) {
     return (
       <>
-        <AppHeader back={{ href: "/rooms", label: "חזרה לחדרים" }} />
         <main id="main" className="px-4 pb-4 pt-6 sm:px-6">
           <div className="mx-auto max-w-ward">
             <EmptyState
@@ -48,22 +54,34 @@ export default function RoomPage({
   }
 
   const list = roomPatients(roomId);
+  const discharged = roomDischarged(roomId);
   const summary = summariseRoom(room, patients);
   const unavailable = room.status === "unavailable";
 
   return (
     <>
-      <AppHeader back={{ href: "/rooms", label: "חזרה לחדרים" }} />
-
       <main id="main" className="px-4 pb-4 pt-6 sm:px-6">
         <div className="mx-auto max-w-ward">
-          <div className="mb-5">
-            <h1 className="text-[32px] font-bold tracking-tight text-navy-deep sm:text-[38px]">
-              חדר <span className="tnum">{room.number}</span>
-            </h1>
-            <p className="mt-1 text-[15px] text-ink-muted">
-              {unavailable ? (room.note ?? "אינו פעיל") : patientCount(list.length)}
-            </p>
+          <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h1 className="text-[32px] font-bold tracking-tight text-navy-deep sm:text-[38px]">
+                חדר <span className="tnum">{room.number}</span>
+              </h1>
+              <p className="mt-1 text-[15px] text-ink-muted">
+                {unavailable ? (room.note ?? "אינו פעיל") : patientCount(list.length)}
+              </p>
+            </div>
+
+            {!unavailable && (
+              <button
+                type="button"
+                onClick={() => setAdmitting(true)}
+                className="inline-flex items-center gap-2 rounded-chip bg-navy px-4 py-2.5 text-[14px] font-semibold text-on-navy transition-colors hover:bg-navy-deep"
+              >
+                <IconPlus className="h-[18px] w-[18px]" />
+                קליטת מטופל
+              </button>
+            )}
           </div>
 
           {!unavailable && (
@@ -109,7 +127,17 @@ export default function RoomPage({
             <EmptyState
               icon={<IconBedGlyph />}
               title="אין מטופלים בחדר"
-              hint="החדר פנוי ומוכן לקליטה. מטופלים שישובצו יופיעו כאן."
+              hint="החדר פנוי ומוכן לקליטה."
+              action={
+                <button
+                  type="button"
+                  onClick={() => setAdmitting(true)}
+                  className="mt-1 inline-flex items-center gap-2 rounded-chip bg-navy px-4 py-2.5 text-[14px] font-semibold text-on-navy transition-colors hover:bg-navy-deep"
+                >
+                  <IconPlus className="h-[18px] w-[18px]" />
+                  קליטת מטופל ראשון
+                </button>
+              }
             />
           ) : (
             <ul className="flex flex-col gap-3 sm:gap-4">
@@ -120,10 +148,47 @@ export default function RoomPage({
               ))}
             </ul>
           )}
+
+          {/* Discharged from this room, kept reachable rather than vanished —
+              a discharge entered on the wrong patient has to be findable. */}
+          {discharged.length > 0 && (
+            <section className="mt-7">
+              <h2 className="mb-2.5 flex items-center gap-2 text-[13px] font-semibold text-ink-muted">
+                <IconArrowBack className="h-4 w-4" />
+                שוחררו מהחדר
+                <span className="tnum rounded-chip border border-line bg-card px-2 py-0.5 text-[12px]">
+                  {discharged.length}
+                </span>
+              </h2>
+              <ul className="flex flex-col gap-2">
+                {discharged.map((patient) => (
+                  <li key={patient.id}>
+                    <PatientCard patient={patient} compact />
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
         </div>
       </main>
 
       <AppFooter />
+
+      {admitting && (
+        <PatientForm
+          mode="admit"
+          roomNumber={room.number}
+          takenBeds={list.map((p) => p.bed)}
+          onClose={() => setAdmitting(false)}
+          onSubmit={(details) => {
+            const id = admitPatient(roomId, details);
+            setAdmitting(false);
+            // Straight into the new record: the reason to admit someone is to
+            // start working on them.
+            if (id) router.push(`/patients/${id}`);
+          }}
+        />
+      )}
     </>
   );
 }

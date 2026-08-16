@@ -289,7 +289,37 @@ export interface Patient {
   discharge: Discharge;
   lastRoundAt: number | null;
   lastTranscript: string | null;
+  /**
+   * When the patient actually left the ward.
+   *
+   * Discharging is not deleting. The bed is freed and the patient drops out of
+   * the room, the ward counts and the task sweep — but the record survives,
+   * because a round that happened happened, and a discharge entered by mistake
+   * has to be reversible. Deleting is the separate, explicit act of saying the
+   * record should never have existed at all.
+   */
+  dischargedAt?: number | null;
 }
+
+/** The fields a human types on the admission form, as opposed to the ones the
+ *  app derives from the round. */
+export interface PatientDetails {
+  name: string;
+  age: number;
+  idNumber: string;
+  hmo: Patient["hmo"];
+  bed: number;
+  hospitalDay: number;
+  primaryDiagnosis: string;
+  status: PatientStatus;
+}
+
+export const HMOS: ReadonlyArray<Patient["hmo"]> = [
+  "כללית",
+  "מכבי",
+  "מאוחדת",
+  "לאומית",
+];
 
 export type RoomStatus = "active" | "empty" | "unavailable";
 
@@ -335,6 +365,39 @@ export function emptyClinicalData(): ClinicalData {
     treatmentPlan: [],
     other: [],
     needsReview: [],
+  };
+}
+
+/**
+ * A patient admitted from the ward UI rather than seeded.
+ *
+ * Everything clinical starts empty on purpose. A newly admitted patient has no
+ * findings, no plan and no tasks until somebody records a round or types them
+ * in — pre-filling any of it would be the app inventing a record.
+ */
+export function newPatient(details: PatientDetails, roomId: string): Patient {
+  return {
+    id: newId("p"),
+    name: details.name,
+    age: details.age,
+    idNumber: details.idNumber,
+    hmo: details.hmo,
+    roomId,
+    bed: details.bed,
+    hospitalDay: details.hospitalDay,
+    primaryDiagnosis: details.primaryDiagnosis,
+    status: details.status,
+    approvedClinicalData: emptyClinicalData(),
+    draftClinicalData: null,
+    draftTasks: [],
+    draftConsultations: [],
+    draftDischarge: null,
+    tasks: [],
+    consultations: [],
+    discharge: { status: "unplanned", blockers: [] },
+    lastRoundAt: null,
+    lastTranscript: null,
+    dischargedAt: null,
   };
 }
 

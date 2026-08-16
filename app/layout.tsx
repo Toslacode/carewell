@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { WardProvider } from "@/lib/store/ward-store";
 import { PrefsProvider } from "@/lib/store/prefs";
-import { UtilityBar } from "@/components/layout/UtilityBar";
+import { TopBar } from "@/components/layout/TopBar";
 
 export const metadata: Metadata = {
   title: "CLARIO — מחלקה פנימית ב׳",
@@ -45,8 +45,10 @@ export default function RootLayout({
         </a>
         <PrefsProvider>
           <WardProvider>
+            {/* One bar above every screen, rendered before the page so it is
+                the page's first sticky ancestor rather than an overlay. */}
+            <TopBar />
             {children}
-            <UtilityBar />
           </WardProvider>
         </PrefsProvider>
       </body>

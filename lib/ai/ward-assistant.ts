@@ -210,7 +210,10 @@ const INTENTS: Intent[] = [
 
 /* ------------------------------------------------------------------ reading */
 
-const patients = (w: WardSnapshot) => Object.values(w.patients);
+/** Only the patients actually in the ward. A question about who is on morphine
+ *  is a question about the beds in front of you, not about people sent home. */
+const patients = (w: WardSnapshot) =>
+  Object.values(w.patients).filter((p) => !p.dischargedAt);
 const data = (p: Patient) => p.draftClinicalData ?? p.approvedClinicalData;
 const tasksOf = (p: Patient) => (p.draftClinicalData ? p.draftTasks : p.tasks);
 const consults = (p: Patient) =>

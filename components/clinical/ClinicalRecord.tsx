@@ -272,7 +272,6 @@ function VitalCard({
 
   return (
     <li
-      onDoubleClick={() => setEditing(true)}
       className={cn(
         "group/vital relative rounded-[12px] border bg-card-raised px-3 py-2.5",
         "transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-sm",
@@ -282,7 +281,7 @@ function VitalCard({
     >
       <span className="flex items-center justify-between gap-1">
         <span className="text-[12px] text-ink-muted">{meta.label}</span>
-        <span className="opacity-0 transition-opacity focus-within:opacity-100 group-hover/vital:opacity-100">
+        <span className="opacity-40 transition-opacity focus-within:opacity-100 group-hover/vital:opacity-100">
           <IconButton
             label={`עריכת ${meta.label}`}
             onClick={() => setEditing(true)}
@@ -304,21 +303,23 @@ function VitalCard({
           }}
         />
       ) : (
-        <span className="mt-0.5 block">
+        // The reading is the target — a measured value and an empty slot both
+        // open on one tap, so correcting a mis-heard temperature is the same
+        // gesture as entering one for the first time.
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          title={`עריכת ${meta.label}`}
+          className="mt-0.5 -mx-1 block w-[calc(100%+8px)] rounded-md px-1 text-start transition-colors hover:bg-page-deep/60"
+        >
           {reading ? (
             <span className="tnum text-[19px] font-semibold leading-tight text-navy-deep">
               {reading.value}
             </span>
           ) : (
-            <button
-              type="button"
-              onClick={() => setEditing(true)}
-              className="text-[15px] text-ink-muted transition-colors hover:text-navy"
-            >
-              לא נמדד
-            </button>
+            <span className="text-[15px] text-ink-muted">לא נמדד</span>
           )}
-        </span>
+        </button>
       )}
     </li>
   );

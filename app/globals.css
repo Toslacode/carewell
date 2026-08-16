@@ -711,6 +711,18 @@
 .hero-wave-5 { animation: clario-wave-a 67s ease-in-out infinite; }
 
 
+/* A strip that scrolls sideways without a scrollbar drawn through it — the bed
+   strip in the top bar, where a track under the chips would read as a divider
+   rather than as chrome. The strip is still reachable by keyboard, and its
+   chips are focusable links, so nothing is lost with the bar hidden. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* Utility: hide visually, keep for screen readers */
 .sr-only {
   position: absolute;

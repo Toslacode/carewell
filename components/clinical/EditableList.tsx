@@ -115,13 +115,8 @@ function Row({
 
   return (
     <li
-      // Double-click is the fast path; the pencil is the discoverable one. A
-      // doctor correcting a mis-heard creatinine mid-round should be able to
-      // hit the number itself rather than aim for a 15px icon that only
-      // appears on hover.
-      onDoubleClick={() => setEditing(true)}
       className={cn(
-        "group/row flex items-start gap-2 rounded-md py-1 pe-1 ps-1.5 transition-colors hover:bg-page-deep/60",
+        "group/row flex items-start gap-2 rounded-md py-1 pe-1 ps-1.5 transition-colors",
         // A line the AI just placed arrives rather than appearing.
         fresh && "reveal shown",
         fresh && "settle",
@@ -137,25 +132,34 @@ function Row({
         />
       )}
 
-      <span className="min-w-0 flex-1 text-[14px] leading-relaxed text-ink">
+      {/* One tap on the line itself opens it. A doctor correcting a mis-heard
+          creatinine mid-round hits the number, not a 15px pencil that only
+          exists while a mouse is hovering — which on a tablet is never. */}
+      <button
+        type="button"
+        onClick={() => setEditing(true)}
+        title="לחצו לעריכה"
+        className="-my-1 -ms-1 min-w-0 flex-1 rounded-md px-1 py-1 text-start text-[14px] leading-relaxed text-ink transition-colors hover:bg-page-deep/70"
+      >
         {entry.text}
         {entry.source === "ai" && (
           <span className="ms-2 align-middle rounded-chip border border-info-line bg-info-bg px-1.5 py-px text-[10px] font-semibold text-info">
             טיוטת AI
           </span>
         )}
-      </span>
+      </button>
 
-      {/* Controls stay in the DOM for keyboard and screen-reader users; they
-          only fade in visually on hover/focus so the record stays calm. */}
-      <span className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover/row:opacity-100">
+      {/* Always present, just quiet. A finger has no hover state, so controls
+          hidden behind one are controls that do not exist on the hardware this
+          runs on; they come to full strength on pointer or keyboard focus. */}
+      <span className="flex shrink-0 items-center gap-0.5 opacity-40 transition-opacity focus-within:opacity-100 group-hover/row:opacity-100">
         <IconButton label="עריכה" onClick={() => setEditing(true)} className="h-7 w-7">
           <IconPencil className="h-[15px] w-[15px]" />
         </IconButton>
         <IconButton
           label="מחיקה"
           onClick={onDelete}
-          className="h-7 w-7 hover:text-urgent"
+          className="h-7 w-7 hover:bg-urgent-bg hover:text-urgent"
         >
           <IconTrash className="h-[15px] w-[15px]" />
         </IconButton>

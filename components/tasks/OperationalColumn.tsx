@@ -52,6 +52,22 @@ export function OperationalColumn({ patient }: { patient: Patient }) {
   );
 }
 
+/**
+ * The edit/delete pair that sits at the end of a row.
+ *
+ * These used to be `opacity-0` until hover — which on the tablet this is
+ * actually used on means "never", because a finger has no hover state. They
+ * are always present now, just quiet, and come up to full strength when a
+ * pointer or the keyboard reaches the row.
+ */
+function RowTools({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="flex items-center gap-0.5 opacity-45 transition-opacity focus-within:opacity-100 group-hover/task:opacity-100 group-hover/consult:opacity-100 group-hover/blocker:opacity-100">
+      {children}
+    </span>
+  );
+}
+
 /* ------------------------------------------------------------------- tasks */
 
 function TasksPanel({ patient, tasks }: { patient: Patient; tasks: Task[] }) {
@@ -129,31 +145,31 @@ function TaskRow({ patient, task }: { patient: Patient; task: Task }) {
   const [pickingPriority, setPickingPriority] = useState(false);
   const done = task.status === "done";
 
-  const nextStatus =
-    task.status === "pending"
-      ? "in-progress"
-      : task.status === "in-progress"
-        ? "done"
-        : "pending";
-
   return (
-    <li
-      onDoubleClick={() => setEditing(true)}
-      className={cn("group/task px-4 py-3", done && "opacity-65")}
-    >
+    <li className={cn("group/task px-4 py-3", done && "opacity-65")}>
       <div className="flex items-start gap-2.5">
+        {/* The circle is one thing only: done, or not done. It used to cycle
+            through three states, which meant completing a task took two taps
+            and the middle one silently claimed work had started. "בביצוע" is
+            still reachable — from the status word below, where a three-way
+            choice belongs. */}
         <button
           type="button"
-          onClick={() => setTaskStatus(patient.id, task.id, nextStatus)}
-          aria-label={`שינוי סטטוס — כרגע ${TASK_STATUS[task.status].label}`}
-          title={`${TASK_STATUS[task.status].label} — לחצו לשינוי`}
+          onClick={() =>
+            setTaskStatus(patient.id, task.id, done ? "pending" : "done")
+          }
+          aria-pressed={done}
+          aria-label={
+            done ? `ביטול סימון "${task.title}" כבוצע` : `סימון "${task.title}" כבוצע`
+          }
+          title={done ? "בוצע — לחצו לביטול" : "סימון כבוצע"}
           className={cn(
             "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors",
             done
               ? "border-stable bg-stable text-white"
               : task.status === "in-progress"
-                ? "border-attention bg-attention-bg text-attention"
-                : "border-line-strong bg-card hover:border-navy",
+                ? "border-attention bg-attention-bg text-attention hover:border-stable hover:bg-stable hover:text-white"
+                : "border-line-strong bg-card hover:border-stable hover:bg-stable-bg",
           )}
         >
           {done ? (
@@ -176,20 +192,46 @@ function TaskRow({ patient, task }: { patient: Patient; task: Task }) {
               }}
             />
           ) : (
-            <p
+            // One tap on the text opens it for correction. A round is a moving
+            // target and half of what lands here needs a word changed; making
+            // that a double-click, or a 15px pencil that only exists on hover,
+            // is asking for precision from someone holding a tablet in one hand.
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
               className={cn(
-                "text-[14px] font-medium text-ink",
+                "-mx-1 block w-[calc(100%+8px)] rounded-md px-1 py-0.5 text-start text-[14px] font-medium text-ink transition-colors hover:bg-page-deep/70",
                 done && "line-through decoration-ink-muted/50",
               )}
             >
               {task.title}
-            </p>
+            </button>
           )}
 
           <div className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1">
-            <span className="text-[12px] text-ink-muted">
+            <button
+              type="button"
+              onClick={() =>
+                setTaskStatus(
+                  patient.id,
+                  task.id,
+                  task.status === "in-progress" ? "pending" : "in-progress",
+                )
+              }
+              title={
+                task.status === "in-progress"
+                  ? "סימון כממתין"
+                  : "סימון כבביצוע"
+              }
+              className={cn(
+                "rounded-chip px-1.5 py-0.5 text-[12px] transition-colors hover:bg-page-deep",
+                task.status === "in-progress"
+                  ? "font-semibold text-attention"
+                  : "text-ink-muted",
+              )}
+            >
               {TASK_STATUS[task.status].label}
-            </span>
+            </button>
             {task.timing && (
               <span className="text-[12px] text-ink-muted">· {task.timing}</span>
             )}
@@ -208,18 +250,18 @@ function TaskRow({ patient, task }: { patient: Patient; task: Task }) {
           >
             <StatusPill descriptor={TASK_PRIORITY[task.priority]} size="sm" />
           </button>
-          <span className="flex items-center gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover/task:opacity-100">
+          <RowTools>
             <IconButton label="עריכה" onClick={() => setEditing(true)} className="h-7 w-7">
               <IconPencil className="h-[15px] w-[15px]" />
             </IconButton>
             <IconButton
-              label="מחיקה"
+              label={`מחיקת המשימה ״${task.title}״`}
               onClick={() => deleteTask(patient.id, task.id)}
-              className="h-7 w-7 hover:text-urgent"
+              className="h-7 w-7 hover:bg-urgent-bg hover:text-urgent"
             >
               <IconTrash className="h-[15px] w-[15px]" />
             </IconButton>
-          </span>
+          </RowTools>
         </div>
       </div>
 
@@ -286,7 +328,7 @@ function ConsultsPanel({
   patient: Patient;
   consults: Consultation[];
 }) {
-  const { setConsultState, addConsult, deleteConsult } = useWard();
+  const { addConsult } = useWard();
   const [adding, setAdding] = useState(false);
   const pending = consults.filter((c) => c.state !== "completed").length;
   const taken = new Set(consults.map((c) => c.specialty));
@@ -308,50 +350,7 @@ function ConsultsPanel({
       ) : (
         <ul className="flex flex-col divide-y divide-line">
           {consults.map((consult) => (
-            <li key={consult.id} className="group/consult px-4 py-3">
-              <div className="flex items-center justify-between gap-2">
-                <span className="min-w-0">
-                  <span className="block text-[14px] font-medium text-ink">
-                    {consult.specialty}
-                  </span>
-                  {consult.reason && (
-                    <span className="mt-0.5 block text-[12px] text-ink-muted">
-                      {consult.reason}
-                    </span>
-                  )}
-                </span>
-                <span className="flex shrink-0 items-center gap-1">
-                  <StatusPill descriptor={CONSULT_STATE[consult.state]} size="sm" />
-                  <span className="opacity-0 transition-opacity focus-within:opacity-100 group-hover/consult:opacity-100">
-                    <IconButton
-                      label={`מחיקת ייעוץ ${consult.specialty}`}
-                      onClick={() => deleteConsult(patient.id, consult.id)}
-                      className="h-7 w-7 hover:text-urgent"
-                    >
-                      <IconTrash className="h-[15px] w-[15px]" />
-                    </IconButton>
-                  </span>
-                </span>
-              </div>
-
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {CONSULT_STATES.map((state) => (
-                  <button
-                    key={state}
-                    type="button"
-                    onClick={() => setConsultState(patient.id, consult.id, state)}
-                    className={cn(
-                      "rounded-chip border px-2.5 py-1 text-[12px] font-medium transition-colors",
-                      state === consult.state
-                        ? "border-navy bg-navy text-on-navy"
-                        : "border-line-strong bg-card text-ink-muted hover:bg-page-deep",
-                    )}
-                  >
-                    {CONSULT_STATE[state].label}
-                  </button>
-                ))}
-              </div>
-            </li>
+            <ConsultRow key={consult.id} patient={patient} consult={consult} />
           ))}
         </ul>
       )}
@@ -378,6 +377,88 @@ function ConsultsPanel({
         )}
       </div>
     </section>
+  );
+}
+
+function ConsultRow({
+  patient,
+  consult,
+}: {
+  patient: Patient;
+  consult: Consultation;
+}) {
+  const { setConsultState, editConsult, deleteConsult } = useWard();
+  const [editing, setEditing] = useState(false);
+
+  return (
+    <li className="group/consult px-4 py-3">
+      <div className="flex items-center justify-between gap-2">
+        <span className="min-w-0 flex-1">
+          {editing ? (
+            <InlineInput
+              initial={consult.specialty}
+              onCancel={() => setEditing(false)}
+              onSave={(text) => {
+                editConsult(patient.id, consult.id, text);
+                setEditing(false);
+              }}
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              className="-mx-1 block w-[calc(100%+8px)] rounded-md px-1 py-0.5 text-start transition-colors hover:bg-page-deep/70"
+            >
+              <span className="block text-[14px] font-medium text-ink">
+                {consult.specialty}
+              </span>
+              {consult.reason && (
+                <span className="mt-0.5 block text-[12px] text-ink-muted">
+                  {consult.reason}
+                </span>
+              )}
+            </button>
+          )}
+        </span>
+        <span className="flex shrink-0 items-center gap-1">
+          <StatusPill descriptor={CONSULT_STATE[consult.state]} size="sm" />
+          <RowTools>
+            <IconButton
+              label={`עריכת ייעוץ ${consult.specialty}`}
+              onClick={() => setEditing(true)}
+              className="h-7 w-7"
+            >
+              <IconPencil className="h-[15px] w-[15px]" />
+            </IconButton>
+            <IconButton
+              label={`מחיקת ייעוץ ${consult.specialty}`}
+              onClick={() => deleteConsult(patient.id, consult.id)}
+              className="h-7 w-7 hover:bg-urgent-bg hover:text-urgent"
+            >
+              <IconTrash className="h-[15px] w-[15px]" />
+            </IconButton>
+          </RowTools>
+        </span>
+      </div>
+
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        {CONSULT_STATES.map((state) => (
+          <button
+            key={state}
+            type="button"
+            onClick={() => setConsultState(patient.id, consult.id, state)}
+            className={cn(
+              "rounded-chip border px-2.5 py-1 text-[12px] font-medium transition-colors",
+              state === consult.state
+                ? "border-navy bg-navy text-on-navy"
+                : "border-line-strong bg-card text-ink-muted hover:bg-page-deep",
+            )}
+          >
+            {CONSULT_STATE[state].label}
+          </button>
+        ))}
+      </div>
+    </li>
   );
 }
 
@@ -481,7 +562,7 @@ function DischargePanel({
   discharge: Patient["discharge"];
   tasks: Task[];
 }) {
-  const { setDischargeStatus, toggleBlocker, addBlocker, deleteBlocker } = useWard();
+  const { setDischargeStatus, addBlocker } = useWard();
   const [adding, setAdding] = useState(false);
   const openBlockers = discharge.blockers.filter((b) => !b.resolved);
 
@@ -538,61 +619,16 @@ function DischargePanel({
           </p>
         ) : (
           <ul className="flex flex-col divide-y divide-line">
-            {discharge.blockers.map((blocker) => {
-              const cleared = !blocker.resolved
-                ? clearingTask(blocker.text, tasks)
-                : undefined;
-              return (
-                <li
-                  key={blocker.id}
-                  className="group/blocker flex items-start gap-2.5 px-4 py-3"
-                >
-                  <button
-                    type="button"
-                    onClick={() => toggleBlocker(patient.id, blocker.id)}
-                    aria-label={
-                      blocker.resolved
-                        ? `סימון "${blocker.text}" כלא טופל`
-                        : `סימון "${blocker.text}" כטופל`
-                    }
-                    className={cn(
-                      "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-[6px] border transition-colors",
-                      blocker.resolved
-                        ? "border-stable bg-stable text-white"
-                        : cleared
-                          ? "border-stable bg-stable-bg text-stable hover:bg-stable hover:text-white"
-                          : "border-line-strong bg-card hover:border-navy",
-                    )}
-                  >
-                    {blocker.resolved && <IconCheck className="h-3 w-3" />}
-                  </button>
-                  <span className="min-w-0 flex-1">
-                    <span
-                      className={cn(
-                        "block text-[14px] text-ink",
-                        blocker.resolved && "text-ink-muted line-through",
-                      )}
-                    >
-                      {blocker.text}
-                    </span>
-                    {cleared && (
-                      <span className="mt-0.5 block text-[12px] text-stable">
-                        ״{cleared.title}״ בוצעה — ניתן לסמן כטופל
-                      </span>
-                    )}
-                  </span>
-                  <span className="shrink-0 opacity-0 transition-opacity focus-within:opacity-100 group-hover/blocker:opacity-100">
-                    <IconButton
-                      label={`מחיקת החסם ״${blocker.text}״`}
-                      onClick={() => deleteBlocker(patient.id, blocker.id)}
-                      className="h-7 w-7 hover:text-urgent"
-                    >
-                      <IconTrash className="h-[15px] w-[15px]" />
-                    </IconButton>
-                  </span>
-                </li>
-              );
-            })}
+            {discharge.blockers.map((blocker) => (
+              <BlockerRow
+                key={blocker.id}
+                patient={patient}
+                blocker={blocker}
+                cleared={
+                  blocker.resolved ? undefined : clearingTask(blocker.text, tasks)
+                }
+              />
+            ))}
           </ul>
         )}
 
@@ -620,6 +656,94 @@ function DischargePanel({
         </div>
       </section>
     </>
+  );
+}
+
+function BlockerRow({
+  patient,
+  blocker,
+  cleared,
+}: {
+  patient: Patient;
+  blocker: Patient["discharge"]["blockers"][number];
+  cleared: Task | undefined;
+}) {
+  const { toggleBlocker, editBlocker, deleteBlocker } = useWard();
+  const [editing, setEditing] = useState(false);
+
+  return (
+    <li className="group/blocker flex items-start gap-2.5 px-4 py-3">
+      <button
+        type="button"
+        onClick={() => toggleBlocker(patient.id, blocker.id)}
+        aria-pressed={blocker.resolved}
+        aria-label={
+          blocker.resolved
+            ? `סימון "${blocker.text}" כלא טופל`
+            : `סימון "${blocker.text}" כטופל`
+        }
+        className={cn(
+          "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-[6px] border transition-colors",
+          blocker.resolved
+            ? "border-stable bg-stable text-white"
+            : cleared
+              ? "border-stable bg-stable-bg text-stable hover:bg-stable hover:text-white"
+              : "border-line-strong bg-card hover:border-stable hover:bg-stable-bg",
+        )}
+      >
+        {blocker.resolved && <IconCheck className="h-3 w-3" />}
+      </button>
+
+      <span className="min-w-0 flex-1">
+        {editing ? (
+          <InlineInput
+            initial={blocker.text}
+            onCancel={() => setEditing(false)}
+            onSave={(text) => {
+              editBlocker(patient.id, blocker.id, text);
+              setEditing(false);
+            }}
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            className="-mx-1 block w-[calc(100%+8px)] rounded-md px-1 py-0.5 text-start transition-colors hover:bg-page-deep/70"
+          >
+            <span
+              className={cn(
+                "block text-[14px] text-ink",
+                blocker.resolved && "text-ink-muted line-through",
+              )}
+            >
+              {blocker.text}
+            </span>
+            {cleared && (
+              <span className="mt-0.5 block text-[12px] text-stable">
+                ״{cleared.title}״ בוצעה — ניתן לסמן כטופל
+              </span>
+            )}
+          </button>
+        )}
+      </span>
+
+      <RowTools>
+        <IconButton
+          label={`עריכת החסם ״${blocker.text}״`}
+          onClick={() => setEditing(true)}
+          className="h-7 w-7"
+        >
+          <IconPencil className="h-[15px] w-[15px]" />
+        </IconButton>
+        <IconButton
+          label={`מחיקת החסם ״${blocker.text}״`}
+          onClick={() => deleteBlocker(patient.id, blocker.id)}
+          className="h-7 w-7 hover:bg-urgent-bg hover:text-urgent"
+        >
+          <IconTrash className="h-[15px] w-[15px]" />
+        </IconButton>
+      </RowTools>
+    </li>
   );
 }
 

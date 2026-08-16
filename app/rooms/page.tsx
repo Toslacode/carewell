@@ -3,7 +3,7 @@
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { AppFooter, AppHeader } from "@/components/layout/AppHeader";
+import { AppFooter } from "@/components/layout/TopBar";
 import { DoorTile } from "@/components/rooms/Door";
 import {
   type DoorOrigin,
@@ -60,14 +60,6 @@ export default function RoomsPage() {
 
   return (
     <>
-      <AppHeader>
-        <span className="flex items-center gap-3 text-[15px] text-ink-muted">
-          <span className="h-px w-8 bg-line-strong" aria-hidden="true" />
-          בחירת חדר
-          <span className="h-px w-8 bg-line-strong" aria-hidden="true" />
-        </span>
-      </AppHeader>
-
       <main id="main" className="px-4 pb-4 pt-6 sm:px-6">
         <div className="mx-auto max-w-ward">
           {/* Ward-level bar: the morning's shape in one line, plus the door

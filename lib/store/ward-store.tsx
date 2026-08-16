@@ -15,6 +15,7 @@ import {
   type DischargeStatus,
   type Extraction,
   type Patient,
+  type PatientDetails,
   type PatientStatus,
   type Room,
   type Task,
@@ -24,6 +25,7 @@ import {
   cloneClinicalData,
   derivePriority,
   newId,
+  newPatient,
 } from "@/lib/schemas/clinical";
 import { type WardData, buildDemoWard } from "@/lib/demo-data/ward";
 
@@ -237,7 +239,16 @@ interface WardContextValue {
 
   getRoom: (roomId: string) => Room | undefined;
   getPatient: (patientId: string) => Patient | undefined;
+  /** Patients currently occupying beds in the room. Excludes the discharged. */
   roomPatients: (roomId: string) => Patient[];
+  /** Patients discharged from the room, newest first. */
+  roomDischarged: (roomId: string) => Patient[];
+
+  admitPatient: (roomId: string, details: PatientDetails) => string | null;
+  updatePatientDetails: (patientId: string, details: PatientDetails) => void;
+  dischargePatient: (patientId: string) => void;
+  readmitPatient: (patientId: string) => void;
+  deletePatient: (patientId: string) => void;
 
   startRound: (patientId: string) => void;
   applyExtraction: (patientId: string, extraction: Extraction) => string[];
@@ -260,8 +271,10 @@ interface WardContextValue {
 
   setConsultState: (patientId: string, consultId: string, state: Consultation["state"]) => void;
   addConsult: (patientId: string, specialty: string, reason?: string | null) => void;
+  editConsult: (patientId: string, consultId: string, specialty: string) => void;
   deleteConsult: (patientId: string, consultId: string) => void;
   addBlocker: (patientId: string, text: string) => void;
+  editBlocker: (patientId: string, blockerId: string, text: string) => void;
   deleteBlocker: (patientId: string, blockerId: string) => void;
   setDischargeStatus: (patientId: string, status: DischargeStatus) => void;
   toggleBlocker: (patientId: string, blockerId: string) => void;
@@ -313,6 +326,138 @@ export function WardProvider({ children }: { children: React.ReactNode }) {
     },
     [],
   );
+
+  /* ------------------------------------------------------ patient lifecycle */
+
+  /** Admit a patient into a room. Returns the new id, or null if the room is
+   *  gone or out of service — a bed in a closed room is not a bed. */
+  const admitPatient = useCallback(
+    (roomId: string, details: PatientDetails): string | null => {
+      const patient = newPatient(details, roomId);
+      let admitted = false;
+      setWard((prev) => {
+        const room = prev.rooms.find((r) => r.id === roomId);
+        if (!room || room.status === "unavailable") return prev;
+        admitted = true;
+        return {
+          rooms: prev.rooms.map((r) =>
+            r.id === roomId
+              ? { ...r, status: "active", patientIds: [...r.patientIds, patient.id] }
+              : r,
+          ),
+          patients: { ...prev.patients, [patient.id]: patient },
+        };
+      });
+      return admitted ? patient.id : null;
+    },
+    [],
+  );
+
+  const updatePatientDetails = useCallback(
+    (patientId: string, details: PatientDetails) => {
+      update(patientId, (p) => ({
+        ...p,
+        name: details.name.trim() || p.name,
+        age: details.age,
+        idNumber: details.idNumber.trim(),
+        hmo: details.hmo,
+        bed: details.bed,
+        hospitalDay: details.hospitalDay,
+        primaryDiagnosis: details.primaryDiagnosis.trim(),
+        status: details.status,
+      }));
+    },
+    [update],
+  );
+
+  /** The patient leaves. The bed is freed and the room stops counting them;
+   *  the record stays, so this can be undone and so a finished round is not
+   *  erased by the act of sending someone home. */
+  const dischargePatient = useCallback(
+    (patientId: string) => {
+      setWard((prev) => {
+        const patient = prev.patients[patientId];
+        if (!patient || patient.dischargedAt) return prev;
+        return {
+          rooms: prev.rooms.map((r) => {
+            if (r.id !== patient.roomId) return r;
+            const patientIds = r.patientIds.filter((id) => id !== patientId);
+            return {
+              ...r,
+              patientIds,
+              status: r.status === "unavailable"
+                ? r.status
+                : patientIds.length > 0
+                  ? "active"
+                  : "empty",
+            };
+          }),
+          patients: {
+            ...prev.patients,
+            [patientId]: { ...patient, dischargedAt: Date.now() },
+          },
+        };
+      });
+    },
+    [],
+  );
+
+  /** Undo a discharge — the patient goes back into the same bed. */
+  const readmitPatient = useCallback(
+    (patientId: string) => {
+      setWard((prev) => {
+        const patient = prev.patients[patientId];
+        if (!patient || !patient.dischargedAt) return prev;
+        const room = prev.rooms.find((r) => r.id === patient.roomId);
+        if (!room || room.status === "unavailable") return prev;
+        return {
+          rooms: prev.rooms.map((r) =>
+            r.id === patient.roomId
+              ? {
+                  ...r,
+                  status: "active",
+                  patientIds: r.patientIds.includes(patientId)
+                    ? r.patientIds
+                    : [...r.patientIds, patientId],
+                }
+              : r,
+          ),
+          patients: {
+            ...prev.patients,
+            [patientId]: { ...patient, dischargedAt: null },
+          },
+        };
+      });
+    },
+    [],
+  );
+
+  /** Erase the record entirely — for one entered by mistake. Distinct from
+   *  discharge, and irreversible, which is why the UI asks twice. */
+  const deletePatient = useCallback((patientId: string) => {
+    setWard((prev) => {
+      const patient = prev.patients[patientId];
+      if (!patient) return prev;
+      const patients = { ...prev.patients };
+      delete patients[patientId];
+      return {
+        rooms: prev.rooms.map((r) => {
+          if (r.id !== patient.roomId) return r;
+          const patientIds = r.patientIds.filter((id) => id !== patientId);
+          return {
+            ...r,
+            patientIds,
+            status: r.status === "unavailable"
+              ? r.status
+              : patientIds.length > 0
+                ? "active"
+                : "empty",
+          };
+        }),
+        patients,
+      };
+    });
+  }, []);
 
   /** Draft edits target draftClinicalData when a round is open, and approved
    *  data otherwise — so the same edit controls work before and after a round
@@ -665,6 +810,21 @@ export function WardProvider({ children }: { children: React.ReactNode }) {
     [update],
   );
 
+  const editConsult = useCallback(
+    (patientId: string, consultId: string, specialty: string) => {
+      const clean = specialty.trim();
+      if (!clean) return;
+      update(patientId, (p) => {
+        const apply = (list: Consultation[]) =>
+          list.map((c) => (c.id === consultId ? { ...c, specialty: clean } : c));
+        return p.draftClinicalData
+          ? { ...p, draftConsultations: apply(p.draftConsultations) }
+          : { ...p, consultations: apply(p.consultations) };
+      });
+    },
+    [update],
+  );
+
   const deleteConsult = useCallback(
     (patientId: string, consultId: string) => {
       update(patientId, (p) => {
@@ -689,6 +849,25 @@ export function WardProvider({ children }: { children: React.ReactNode }) {
         return p.draftDischarge
           ? { ...p, draftDischarge: add(p.draftDischarge) }
           : { ...p, discharge: add(p.discharge) };
+      });
+    },
+    [update],
+  );
+
+  const editBlocker = useCallback(
+    (patientId: string, blockerId: string, text: string) => {
+      const clean = text.trim();
+      if (!clean) return;
+      update(patientId, (p) => {
+        const apply = (d: Patient["discharge"]) => ({
+          ...d,
+          blockers: d.blockers.map((b) =>
+            b.id === blockerId ? { ...b, text: clean } : b,
+          ),
+        });
+        return p.draftDischarge
+          ? { ...p, draftDischarge: apply(p.draftDischarge) }
+          : { ...p, discharge: apply(p.discharge) };
       });
     },
     [update],
@@ -759,9 +938,18 @@ export function WardProvider({ children }: { children: React.ReactNode }) {
         if (!room) return [];
         return room.patientIds
           .map((pid) => ward.patients[pid])
-          .filter(Boolean)
+          .filter((p) => p && !p.dischargedAt)
           .sort((a, b) => a.bed - b.bed);
       },
+      roomDischarged: (roomId) =>
+        Object.values(ward.patients)
+          .filter((p) => p.roomId === roomId && p.dischargedAt)
+          .sort((a, b) => (b.dischargedAt ?? 0) - (a.dischargedAt ?? 0)),
+      admitPatient,
+      updatePatientDetails,
+      dischargePatient,
+      readmitPatient,
+      deletePatient,
       startRound,
       applyExtraction,
       discardRound,
@@ -780,8 +968,10 @@ export function WardProvider({ children }: { children: React.ReactNode }) {
       addTask,
       setConsultState,
       addConsult,
+      editConsult,
       deleteConsult,
       addBlocker,
+      editBlocker,
       deleteBlocker,
       setDischargeStatus,
       toggleBlocker,
@@ -790,6 +980,11 @@ export function WardProvider({ children }: { children: React.ReactNode }) {
     [
       ward,
       hydrated,
+      admitPatient,
+      updatePatientDetails,
+      dischargePatient,
+      readmitPatient,
+      deletePatient,
       startRound,
       applyExtraction,
       discardRound,
@@ -808,8 +1003,10 @@ export function WardProvider({ children }: { children: React.ReactNode }) {
       addTask,
       setConsultState,
       addConsult,
+      editConsult,
       deleteConsult,
       addBlocker,
+      editBlocker,
       deleteBlocker,
       setDischargeStatus,
       toggleBlocker,
@@ -839,7 +1036,9 @@ export interface RoomSummary {
 }
 
 export function summariseRoom(room: Room, patients: Record<string, Patient>): RoomSummary {
-  const list = room.patientIds.map((id) => patients[id]).filter(Boolean);
+  const list = room.patientIds
+    .map((id) => patients[id])
+    .filter((p) => p && !p.dischargedAt);
   let openTasks = 0;
   let urgentTasks = 0;
   let possibleDischarges = 0;
