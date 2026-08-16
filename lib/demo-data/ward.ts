@@ -722,6 +722,8 @@ function buildPatient(seed: Seed, roomId: string): Patient {
     },
     lastRoundAt: null,
     lastTranscript: null,
+    dischargedAt: null,
+    dischargeReport: null,
   };
 }
 

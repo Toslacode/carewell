@@ -7,11 +7,13 @@ import { PATIENT_STATUS, taskCount } from "@/lib/labels";
 import { StatusPill } from "@/components/ui/primitives";
 import { ConfirmButton } from "@/components/ui/ConfirmButton";
 import { PatientForm } from "@/components/patients/PatientForm";
+import { DischargeReportDialog } from "@/components/patients/DischargeReportDialog";
 import {
   IconArrowBack,
   IconBed,
   IconChevron,
   IconClipboard,
+  IconDocument,
   IconHeart,
   IconPencil,
   IconTrash,
@@ -40,15 +42,10 @@ export function PatientCard({
   /** The discharged listing: same identity, none of the ward workflow. */
   compact?: boolean;
 }) {
-  const {
-    getRoom,
-    roomPatients,
-    updatePatientDetails,
-    dischargePatient,
-    readmitPatient,
-    deletePatient,
-  } = useWard();
+  const { getRoom, roomPatients, updatePatientDetails, readmitPatient, deletePatient } =
+    useWard();
   const [editing, setEditing] = useState(false);
+  const [dischargeOpen, setDischargeOpen] = useState(false);
 
   const status = PATIENT_STATUS[patient.status];
   const open = openTaskCount(patient);
@@ -59,19 +56,26 @@ export function PatientCard({
     .filter((p) => p.id !== patient.id)
     .map((p) => p.bed);
 
-  const form = editing ? (
-    <PatientForm
-      mode="edit"
-      patient={patient}
-      roomNumber={roomNumber}
-      takenBeds={takenBeds}
-      onClose={() => setEditing(false)}
-      onSubmit={(details) => {
-        updatePatientDetails(patient.id, details);
-        setEditing(false);
-      }}
-    />
-  ) : null;
+  const dialogs = (
+    <>
+      {editing && (
+        <PatientForm
+          mode="edit"
+          patient={patient}
+          roomNumber={roomNumber}
+          takenBeds={takenBeds}
+          onClose={() => setEditing(false)}
+          onSubmit={(details) => {
+            updatePatientDetails(patient.id, details);
+            setEditing(false);
+          }}
+        />
+      )}
+      {dischargeOpen && (
+        <DischargeReportDialog patient={patient} onClose={() => setDischargeOpen(false)} />
+      )}
+    </>
+  );
 
   if (compact) {
     return (
@@ -99,6 +103,14 @@ export function PatientCard({
           <span className="relative z-10 flex shrink-0 flex-wrap items-center justify-end gap-1.5">
             <button
               type="button"
+              onClick={() => setDischargeOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-chip border border-line-strong bg-card px-2.5 py-1.5 text-[12px] font-medium text-ink transition-colors hover:bg-page-deep"
+            >
+              <IconDocument className="h-[15px] w-[15px] text-ink-muted" />
+              דוח שחרור
+            </button>
+            <button
+              type="button"
               onClick={() => readmitPatient(patient.id)}
               className="inline-flex items-center gap-1.5 rounded-chip border border-line-strong bg-card px-2.5 py-1.5 text-[12px] font-medium text-ink transition-colors hover:bg-page-deep"
             >
@@ -115,7 +127,7 @@ export function PatientCard({
             />
           </span>
         </div>
-        {form}
+        {dialogs}
       </>
     );
   }
@@ -186,15 +198,17 @@ export function PatientCard({
                 <IconPencil className="h-[15px] w-[15px] text-ink-muted" />
                 עריכת פרטים
               </button>
-              <ConfirmButton
-                tone="info"
-                label="שחרור"
-                question={`לשחרר את ${patient.name}?`}
-                confirmLabel="שחרור"
-                icon={<IconHeart className="h-[15px] w-[15px] text-ink-muted" />}
-                onConfirm={() => dischargePatient(patient.id)}
-                className="px-2.5 py-1 text-[12px]"
-              />
+              {/* Opens the discharge letter rather than a yes/no chip:
+                  reviewing it and pressing "אישור שחרור" inside is itself the
+                  confirmation. */}
+              <button
+                type="button"
+                onClick={() => setDischargeOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-chip border border-line-strong bg-card px-2.5 py-1 text-[12px] font-medium text-ink transition-colors hover:border-info-line hover:bg-info-bg hover:text-info"
+              >
+                <IconHeart className="h-[15px] w-[15px] text-ink-muted" />
+                שחרור
+              </button>
               <ConfirmButton
                 label="מחיקה"
                 question={`למחוק את ${patient.name} לצמיתות?`}
@@ -225,7 +239,7 @@ export function PatientCard({
 
       </div>
 
-      {form}
+      {dialogs}
     </>
   );
 }

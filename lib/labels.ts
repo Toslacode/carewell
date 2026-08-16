@@ -1,5 +1,6 @@
 import type {
   ConsultState,
+  DischargeDestination,
   DischargeStatus,
   PatientStatus,
   TaskPriority,
@@ -68,6 +69,24 @@ export const DISCHARGE_STATUS: Record<DischargeStatus, Descriptor> = {
   tomorrow: { label: "אפשרי מחר", tone: "info", glyph: "◷" },
   unknown: { label: "לא ידוע", tone: "neutral", glyph: "○" },
 };
+
+/** Home leads the list because it is the common case — the two adverse
+ *  outcomes sit last so neither is ever the accidental default. */
+export const DISCHARGE_DESTINATION: Record<DischargeDestination, Descriptor> = {
+  home: { label: "הביתה", tone: "stable", glyph: "○" },
+  "other-hospital": { label: "בית חולים אחר", tone: "info", glyph: "◆" },
+  institution: { label: "מוסד", tone: "info", glyph: "◆" },
+  "left-against-advice": { label: "עזב על דעת עצמו", tone: "attention", glyph: "▲" },
+  deceased: { label: "נפטר", tone: "urgent", glyph: "✕" },
+};
+
+export const DISCHARGE_DESTINATIONS: DischargeDestination[] = [
+  "home",
+  "other-hospital",
+  "institution",
+  "left-against-advice",
+  "deceased",
+];
 
 /** The eight permanent clinical categories, in their permanent order. The UI
  *  renders every one of these on every patient, populated or not — a doctor

@@ -7,10 +7,12 @@ import { ClinicalRecord } from "@/components/clinical/ClinicalRecord";
 import { OperationalColumn } from "@/components/tasks/OperationalColumn";
 import { RecordingBar } from "@/components/recording/RecordingBar";
 import { PatientForm } from "@/components/patients/PatientForm";
+import { DischargeReportDialog } from "@/components/patients/DischargeReportDialog";
 import { ConfirmButton } from "@/components/ui/ConfirmButton";
 import { EmptyState, StatusPill } from "@/components/ui/primitives";
 import {
   IconArrowBack,
+  IconDocument,
   IconHeart,
   IconPencil,
   IconTrash,
@@ -38,6 +40,7 @@ export default function PatientPage({
   const router = useRouter();
   const [structuring, setStructuring] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [dischargeOpen, setDischargeOpen] = useState(false);
   const onPhaseChange = useCallback(
     (phase: string) => setStructuring(phase === "structuring"),
     [],
@@ -47,7 +50,6 @@ export default function PatientPage({
     getRoom,
     roomPatients,
     updatePatientDetails,
-    dischargePatient,
     readmitPatient,
     deletePatient,
   } = useWard();
@@ -110,7 +112,7 @@ export default function PatientPage({
                 עריכת פרטים
               </button>
 
-              {discharged ? (
+              {discharged && (
                 <button
                   type="button"
                   onClick={() => readmitPatient(patient.id)}
@@ -119,19 +121,29 @@ export default function PatientPage({
                   <IconArrowBack className="h-4 w-4 text-ink-muted" />
                   ביטול שחרור
                 </button>
-              ) : (
-                <ConfirmButton
-                  tone="info"
-                  label="שחרור מטופל"
-                  question="לשחרר את המטופל?"
-                  confirmLabel="שחרור"
-                  icon={<IconHeart className="h-4 w-4 text-ink-muted" />}
-                  onConfirm={() => {
-                    dischargePatient(patient.id);
-                    router.push(`/rooms/${patient.roomId}`);
-                  }}
-                />
               )}
+
+              {/* Reviewing the discharge letter and pressing "אישור שחרור"
+                  inside it is the confirmation — a doctor reading their own
+                  discharge summary before it goes out is a stronger check
+                  than a yes/no chip, so this opens straight into it. */}
+              <button
+                type="button"
+                onClick={() => setDischargeOpen(true)}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-chip border px-3 py-1.5 text-[13px] font-medium transition-colors",
+                  discharged
+                    ? "border-line-strong bg-card text-ink hover:bg-page-deep"
+                    : "border-line-strong bg-card text-ink hover:border-info-line hover:bg-info-bg hover:text-info",
+                )}
+              >
+                {discharged ? (
+                  <IconDocument className="h-4 w-4 text-ink-muted" />
+                ) : (
+                  <IconHeart className="h-4 w-4 text-ink-muted" />
+                )}
+                {discharged ? "דוח שחרור" : "שחרור מטופל"}
+              </button>
 
               <ConfirmButton
                 label="מחיקה"
@@ -205,6 +217,14 @@ export default function PatientPage({
             updatePatientDetails(patient.id, details);
             setEditing(false);
           }}
+        />
+      )}
+
+      {dischargeOpen && (
+        <DischargeReportDialog
+          patient={patient}
+          onClose={() => setDischargeOpen(false)}
+          onDischarged={() => router.push(`/rooms/${patient.roomId}`)}
         />
       )}
     </>

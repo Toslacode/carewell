@@ -12,6 +12,7 @@ import {
   type ClinicalData,
   type ClinicalItem,
   type Consultation,
+  type DischargeReport,
   type DischargeStatus,
   type Extraction,
   type Patient,
@@ -249,6 +250,7 @@ interface WardContextValue {
   dischargePatient: (patientId: string) => void;
   readmitPatient: (patientId: string) => void;
   deletePatient: (patientId: string) => void;
+  saveDischargeReport: (patientId: string, report: DischargeReport) => void;
 
   startRound: (patientId: string) => void;
   applyExtraction: (patientId: string, extraction: Extraction) => string[];
@@ -458,6 +460,16 @@ export function WardProvider({ children }: { children: React.ReactNode }) {
       };
     });
   }, []);
+
+  /** Not part of the round's draft/approved split — a discharge letter isn't
+   *  clinical findings under review, it's a document being written, and it
+   *  stays editable exactly as long as the patient's record does. */
+  const saveDischargeReport = useCallback(
+    (patientId: string, report: DischargeReport) => {
+      update(patientId, (p) => ({ ...p, dischargeReport: report }));
+    },
+    [update],
+  );
 
   /** Draft edits target draftClinicalData when a round is open, and approved
    *  data otherwise — so the same edit controls work before and after a round
@@ -950,6 +962,7 @@ export function WardProvider({ children }: { children: React.ReactNode }) {
       dischargePatient,
       readmitPatient,
       deletePatient,
+      saveDischargeReport,
       startRound,
       applyExtraction,
       discardRound,
@@ -985,6 +998,7 @@ export function WardProvider({ children }: { children: React.ReactNode }) {
       dischargePatient,
       readmitPatient,
       deletePatient,
+      saveDischargeReport,
       startRound,
       applyExtraction,
       discardRound,

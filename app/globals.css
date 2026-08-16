@@ -711,6 +711,74 @@
 .hero-wave-5 { animation: clario-wave-a 67s ease-in-out infinite; }
 
 
+/* The discharge letter's print output. Hidden on screen — the editable dialog
+   is the on-screen form of the same document — and the only thing left
+   visible when the browser's print dialog opens. Plain black-on-white and
+   serif: this is a page meant to be read off paper, not styled to match the
+   app around it. */
+.discharge-print {
+  display: none;
+}
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .discharge-print,
+  .discharge-print * {
+    visibility: visible;
+  }
+  .discharge-print {
+    display: block;
+    position: absolute;
+    inset: 0;
+    padding: 16mm;
+    font-family: Georgia, "Times New Roman", serif;
+    color: #000;
+    background: #fff;
+  }
+  .discharge-print h1 {
+    font-size: 20px;
+    font-weight: 700;
+    margin: 0 0 4px;
+  }
+  .discharge-print .meta {
+    font-size: 12px;
+    line-height: 1.6;
+    margin: 0 0 18px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #000;
+  }
+  .discharge-print h2 {
+    font-size: 13px;
+    font-weight: 700;
+    margin: 16px 0 4px;
+  }
+  .discharge-print p {
+    font-size: 13px;
+    line-height: 1.6;
+    margin: 0;
+    white-space: pre-wrap;
+  }
+  .discharge-print table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    margin-top: 4px;
+  }
+  .discharge-print th,
+  .discharge-print td {
+    border: 1px solid #000;
+    padding: 4px 6px;
+    text-align: start;
+  }
+  .discharge-print .sign {
+    margin-top: 28px;
+    padding-top: 12px;
+    border-top: 1px solid #000;
+    font-size: 12px;
+  }
+}
+
 /* A strip that scrolls sideways without a scrollbar drawn through it — the bed
    strip in the top bar, where a track under the chips would read as a divider
    rather than as chrome. The strip is still reachable by keyboard, and its

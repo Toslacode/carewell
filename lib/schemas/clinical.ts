@@ -258,6 +258,54 @@ export interface Discharge {
   blockers: DischargeBlocker[];
 }
 
+/* ------------------------------------------------------------ the letter */
+
+/** Where the patient is going. Mirrors the ward's own discharge form: home is
+ *  the common case and sits first, the two adverse outcomes sit last so they
+ *  are never the accidental default. */
+export type DischargeDestination =
+  | "home"
+  | "other-hospital"
+  | "institution"
+  | "left-against-advice"
+  | "deceased";
+
+export interface DischargeMedication {
+  id: string;
+  name: string;
+  dosage: string;
+  frequency: string;
+  route: string;
+  duration: string;
+}
+
+/**
+ * The discharge letter. Generated as a pre-filled draft the moment a doctor
+ * chooses to discharge, then reviewed and corrected by hand before anything
+ * is final — the same "AI drafts, a human approves" shape as a recorded
+ * round, applied to the one document that leaves the ward with the patient.
+ *
+ * Free text rather than structured lists for diagnoses, the course summary
+ * and the follow-up plan: a discharge letter is prose a doctor writes, not a
+ * form a doctor fills in field by field, and forcing it into bullet rows here
+ * would fight the way it actually gets written.
+ */
+export interface DischargeReport {
+  destination: DischargeDestination;
+  diagnoses: string;
+  summary: string;
+  medications: DischargeMedication[];
+  followUp: string;
+  generalInstructions: string;
+  physicianName: string;
+  generatedAt: number;
+  updatedAt: number;
+}
+
+export function newDischargeMedication(): DischargeMedication {
+  return { id: newId("m"), name: "", dosage: "", frequency: "", route: "", duration: "" };
+}
+
 export type PatientStatus =
   | "stable"
   | "monitoring"
@@ -299,6 +347,10 @@ export interface Patient {
    * record should never have existed at all.
    */
   dischargedAt?: number | null;
+  /** The discharge letter. Set the moment discharge is first opened, and
+   *  editable indefinitely after — a report is not sealed by the act of
+   *  sending the patient home. */
+  dischargeReport?: DischargeReport | null;
 }
 
 /** The fields a human types on the admission form, as opposed to the ones the
@@ -398,6 +450,7 @@ export function newPatient(details: PatientDetails, roomId: string): Patient {
     lastRoundAt: null,
     lastTranscript: null,
     dischargedAt: null,
+    dischargeReport: null,
   };
 }
 
