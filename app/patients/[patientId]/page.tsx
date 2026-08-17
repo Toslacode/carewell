@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ClinicalRecord } from "@/components/clinical/ClinicalRecord";
 import { OperationalColumn } from "@/components/tasks/OperationalColumn";
-import { RecordingBar } from "@/components/recording/RecordingBar";
+import { RoundWorkspace } from "@/components/round/RoundWorkspace";
+import { RoundSources } from "@/components/round/RoundSources";
+import { AttendingDoctor } from "@/components/patients/AttendingDoctor";
 import { PatientForm } from "@/components/patients/PatientForm";
 import { DischargeReportDialog } from "@/components/patients/DischargeReportDialog";
 import { ConfirmButton } from "@/components/ui/ConfirmButton";
@@ -157,10 +159,16 @@ export default function PatientPage({
               />
             </div>
 
-            <p className="w-full text-[14px] text-ink-muted">
-              מיטה <span className="tnum">{patient.bed}</span>, חדר{" "}
-              <span className="tnum">{room?.number ?? "—"}</span>
-            </p>
+            <div className="flex w-full flex-wrap items-center gap-x-4 gap-y-2">
+              <p className="text-[14px] text-ink-muted">
+                מיטה <span className="tnum">{patient.bed}</span>, חדר{" "}
+                <span className="tnum">{room?.number ?? "—"}</span>
+              </p>
+              <AttendingDoctor
+                patientId={patient.id}
+                doctor={patient.attendingDoctor}
+              />
+            </div>
           </div>
 
           {discharged && (
@@ -195,16 +203,20 @@ export default function PatientPage({
           </dl>
 
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-            <ClinicalRecord patient={patient} structuring={structuring} />
+            <div className="flex flex-col gap-4">
+              <ClinicalRecord patient={patient} structuring={structuring} />
+              {/* The evidence, under the interpretation drawn from it. */}
+              <RoundSources patient={patient} />
+            </div>
             <OperationalColumn patient={patient} />
           </div>
 
-          {/* room for the sticky bar so the last panel is never covered */}
-          <div className="h-28" aria-hidden="true" />
+          {/* room for the sticky workspace so the last panel is never covered */}
+          <div className="h-40" aria-hidden="true" />
         </div>
       </main>
 
-      <RecordingBar patient={patient} onPhaseChange={onPhaseChange} />
+      <RoundWorkspace patient={patient} onPhaseChange={onPhaseChange} />
 
       {editing && (
         <PatientForm

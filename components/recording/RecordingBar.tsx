@@ -66,11 +66,15 @@ type Phase =
 export function RecordingBar({
   patient,
   onPhaseChange,
+  embedded = false,
 }: {
   patient: Patient;
   /** Lets the page mirror the recorder's state — the clinical record shows a
    *  scan sweep while the AI is rewriting it. */
   onPhaseChange?: (phase: Phase) => void;
+  /** Rendered inside the round workspace, which already supplies the sticky
+   *  footer and the page gutters. Nothing else about the bar changes. */
+  embedded?: boolean;
 }) {
   const { startRound, applyExtraction, approveRound, discardRound, setTranscript } =
     useWard();
@@ -249,7 +253,7 @@ export function RecordingBar({
   const transcript = [finalText, partialText].filter(Boolean).join(" ");
 
   return (
-    <div className="sticky bottom-0 z-30 px-4 pb-4 sm:px-6">
+    <div className={embedded ? "" : "sticky bottom-0 z-30 px-4 pb-4 sm:px-6"}>
       <section
         aria-label="הקלטת סבב"
         className={cn(

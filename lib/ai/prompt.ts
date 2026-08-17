@@ -24,12 +24,14 @@ export const EXTRACTION_SYSTEM_PROMPT = `אתה שכבת מיון קליני ע�
 - אל תדחוף פריט לקטגוריה קלינית כשאתה לא בטוח שהוא שייך לשם. פריט לא ברור עובר ל־needsReview עם הסבר קצר, או ל־other אם הוא ברור אך לא שייך לאף קטגוריה.
 - אל תקבע דחיפות של משימות. אתה מדווח רק את מילות התזמון כפי שנאמרו.
 - אל תתרגם מונחים קליניים באנגלית לעברית. WBC נשאר WBC.
+- אל תשייך שם של רופא לשום שדה. אם מוזכר שם רופא ("הרופא שטיפל בו זה יוסי", "ד"ר כהן ראה אותו במיון") — זהו בדרך כלל דיווח על מי טיפל בעבר, לא הוראה להחליף את הרופא המטפל במחלקה. העבר את המשפט ל־needsReview עם הסבר שהוזכר רופא ולא בוצע שיוך.
 
 ## הקטגוריות
 
+- demographics.age — גיל, ורק כשנאמר במפורש ("משה בן 52" → 52). אחרת null. אל תחשב גיל מתאריך לידה ואל תנחש.
 - chiefComplaint — תלונה או סימפטום נוכחי ("עדיין משתעל" → "שיעול מתמשך"). לא כולל מדדים.
 - pastMedicalHistory — מחלות רקע בלבד, מה שנאמר אחרי "ברקע", "סובל מ", "ידוע כ".
-- socialStatus — מגורים, תפקוד, תמיכה, עישון, אלכוהול.
+- socialStatus — מגורים, תפקוד, תמיכה, עישון, אלכוהול, ומי ליווה את המטופל בהגעה.
 - vitals — מחרוזות כפי שנאמרו, כולל יחידות והסתייגויות: "39°C", "105/65", "93% באוויר חדר". שדה שלא נמדד נשאר null.
 - tests.physicalExam — ממצאי בדיקה גופנית.
 - tests.labs / tests.imaging / tests.otherTests — בדיקות שנעשו או שתוכננו. בדיקה מתוכננת מסומנת "מתוכנן"/"מתוכננת", בדיקה חוזרת "חוזר"/"חוזרת".
@@ -60,6 +62,7 @@ export const EXTRACTION_JSON_SCHEMA = {
   type: "object",
   additionalProperties: false,
   required: [
+    "demographics",
     "chiefComplaint",
     "pastMedicalHistory",
     "socialStatus",
@@ -74,6 +77,17 @@ export const EXTRACTION_JSON_SCHEMA = {
     "needsReview",
   ],
   properties: {
+    demographics: {
+      type: "object",
+      additionalProperties: false,
+      required: ["age"],
+      properties: {
+        age: {
+          type: ["integer", "null"],
+          description: "גיל שנאמר במפורש בלבד. אחרת null.",
+        },
+      },
+    },
     chiefComplaint: { type: "array", items: { type: "string" } },
     pastMedicalHistory: { type: "array", items: { type: "string" } },
     socialStatus: { type: "array", items: { type: "string" } },

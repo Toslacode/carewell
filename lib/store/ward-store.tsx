@@ -103,6 +103,9 @@ export interface MergeResult {
   tasks: Task[];
   consultations: Consultation[];
   discharge: Patient["discharge"];
+  /** A proposed change to the patient's identity, held out of the record until
+   *  the round is approved. Null when the round proposed nothing. */
+  demographics: { age: number | null } | null;
   /** Section paths that gained content, so the UI can scroll to / flash them. */
   touched: string[];
 }
@@ -113,6 +116,7 @@ function applyExtractionTo(
   baseTasks: Task[],
   baseConsults: Consultation[],
   baseDischarge: Patient["discharge"],
+  baseDemographics: { age: number | null } | null,
   extraction: Extraction,
 ): MergeResult {
   const stamp = Date.now();
@@ -216,6 +220,16 @@ function applyExtractionTo(
     if (!touched.includes("discharge")) touched.push("discharge");
   }
 
+  // A spoken age only becomes a proposal when it actually disagrees with what
+  // the patient already has — re-stating the age a doctor already entered is
+  // not a change, and should not light up the review panel as one.
+  let demographics = baseDemographics;
+  const spokenAge = extraction.demographics.age;
+  if (spokenAge !== null && spokenAge !== patient.age) {
+    demographics = { age: spokenAge };
+    touched.push("demographics");
+  }
+
   return {
     data,
     tasks: freshTasks.length ? [...baseTasks, ...freshTasks] : baseTasks,
@@ -223,6 +237,7 @@ function applyExtractionTo(
       ? [...baseConsults, ...freshConsults]
       : baseConsults,
     discharge,
+    demographics,
     touched,
   };
 }
@@ -257,6 +272,8 @@ interface WardContextValue {
   discardRound: (patientId: string) => void;
   approveRound: (patientId: string) => void;
   setTranscript: (patientId: string, transcript: string) => void;
+  setRoundNote: (patientId: string, note: string) => void;
+  setAttendingDoctor: (patientId: string, doctor: string) => void;
 
   editItem: (patientId: string, path: ListPath, itemId: string, text: string) => void;
   deleteItem: (patientId: string, path: ListPath, itemId: string) => void;
@@ -499,7 +516,11 @@ export function WardProvider({ children }: { children: React.ReactNode }) {
                 status: p.discharge.status,
                 blockers: p.discharge.blockers.map((b) => ({ ...b })),
               },
+              draftDemographics: null,
               lastTranscript: "",
+              // roundNote is deliberately left alone. A doctor who typed notes
+              // and then pressed record is still in the same round, and
+              // clearing the note here would delete what they had written.
             },
       );
     },
@@ -518,6 +539,7 @@ export function WardProvider({ children }: { children: React.ReactNode }) {
           p.draftTasks,
           p.draftConsultations,
           p.draftDischarge,
+          p.draftDemographics,
           extraction,
         );
         touched = result.touched;
@@ -532,6 +554,7 @@ export function WardProvider({ children }: { children: React.ReactNode }) {
               draftTasks: result.tasks,
               draftConsultations: result.consultations,
               draftDischarge: result.discharge,
+              draftDemographics: result.demographics,
             },
           },
         };
@@ -549,8 +572,20 @@ export function WardProvider({ children }: { children: React.ReactNode }) {
         draftTasks: [],
         draftConsultations: [],
         draftDischarge: null,
+        draftDemographics: null,
         lastTranscript: null,
+        roundNote: null,
       }));
+    },
+    [update],
+  );
+
+  /** The typed half of a round, saved as the doctor writes. Kept verbatim and
+   *  kept separate from the transcript — two sources, neither standing in for
+   *  the other. */
+  const setRoundNote = useCallback(
+    (patientId: string, note: string) => {
+      update(patientId, (p) => ({ ...p, roundNote: note }));
     },
     [update],
   );
@@ -606,8 +641,22 @@ export function WardProvider({ children }: { children: React.ReactNode }) {
         }
         if (openUrgent) status = "attention";
 
+        // The round's raw input is archived alongside the structured result.
+        // Structured fields are an interpretation; this is the evidence, and a
+        // doctor reviewing a decision later has to be able to read it back
+        // exactly as it was spoken or typed.
+        const transcript = p.lastTranscript?.trim() || null;
+        const note = p.roundNote?.trim() || null;
+        const rounds = [...(p.rounds ?? [])];
+        if (transcript || note) {
+          rounds.push({ id: newId("rd"), at: Date.now(), transcript, note });
+        }
+
         return {
           ...p,
+          // A demographic change proposed by the round lands here and nowhere
+          // earlier — this is the moment a human signed off on it.
+          age: p.draftDemographics?.age ?? p.age,
           approvedClinicalData: approved,
           draftClinicalData: null,
           tasks,
@@ -619,6 +668,13 @@ export function WardProvider({ children }: { children: React.ReactNode }) {
             blockers: discharge.blockers.map((b) => ({ ...b })),
           },
           draftDischarge: null,
+          draftDemographics: null,
+          rounds,
+          // Both live sources are cleared because both are now archived above.
+          // Leaving them set would show a finished round as still open, and
+          // would let the next round's structuring read the last one's text.
+          lastTranscript: null,
+          roundNote: null,
           status,
           lastRoundAt: Date.now(),
         };
@@ -630,6 +686,17 @@ export function WardProvider({ children }: { children: React.ReactNode }) {
   const setTranscript = useCallback(
     (patientId: string, transcript: string) => {
       update(patientId, (p) => ({ ...p, lastTranscript: transcript }));
+    },
+    [update],
+  );
+
+  /** Only ever called from a control a person operated. Extraction has no path
+   *  to this field by design — see ExtractionSchema.demographics. */
+  const setAttendingDoctor = useCallback(
+    (patientId: string, doctor: string) => {
+      const clean = doctor.trim();
+      if (!clean) return;
+      update(patientId, (p) => ({ ...p, attendingDoctor: clean }));
     },
     [update],
   );
@@ -968,6 +1035,8 @@ export function WardProvider({ children }: { children: React.ReactNode }) {
       discardRound,
       approveRound,
       setTranscript,
+      setRoundNote,
+      setAttendingDoctor,
       editItem,
       deleteItem,
       addItem,
@@ -1004,6 +1073,8 @@ export function WardProvider({ children }: { children: React.ReactNode }) {
       discardRound,
       approveRound,
       setTranscript,
+      setRoundNote,
+      setAttendingDoctor,
       editItem,
       deleteItem,
       addItem,

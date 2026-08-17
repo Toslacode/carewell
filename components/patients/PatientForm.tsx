@@ -6,6 +6,7 @@ import {
   type PatientDetails,
   type PatientStatus,
   HMOS,
+  WARD_DOCTORS,
 } from "@/lib/schemas/clinical";
 import { PATIENT_STATUS } from "@/lib/labels";
 import { cn } from "@/lib/utils/cn";
@@ -70,6 +71,7 @@ export function PatientForm({
     String(patient?.hospitalDay ?? 1),
   );
   const [diagnosis, setDiagnosis] = useState(patient?.primaryDiagnosis ?? "");
+  const [doctor, setDoctor] = useState(patient?.attendingDoctor ?? WARD_DOCTORS[0]);
   const [status, setStatus] = useState<PatientStatus>(patient?.status ?? "stable");
   const [touched, setTouched] = useState(false);
 
@@ -105,6 +107,7 @@ export function PatientForm({
       bed: bedNumber,
       hospitalDay: clampInt(hospitalDay, 1, 400, 1),
       primaryDiagnosis: diagnosis.trim(),
+      attendingDoctor: doctor.trim() || WARD_DOCTORS[0],
       status,
     });
   };
@@ -226,6 +229,26 @@ export function PatientForm({
                 value={diagnosis}
                 onChange={(e) => setDiagnosis(e.target.value)}
                 placeholder="לדוגמה: אי־ספיקת לב"
+                autoComplete="off"
+                className={inputClass(false)}
+              />
+            </Field>
+
+            {/* The roster covers the ward; the free-text field covers everyone
+                else — a locum, a name not on the list. Neither is ever filled
+                in from a round note. */}
+            <Field label="הרופא המטפל" className="col-span-2">
+              <div className="mb-2 flex flex-wrap gap-1.5">
+                {WARD_DOCTORS.map((d) => (
+                  <Chip key={d} active={d === doctor} onClick={() => setDoctor(d)}>
+                    {d}
+                  </Chip>
+                ))}
+              </div>
+              <input
+                value={doctor}
+                onChange={(e) => setDoctor(e.target.value)}
+                placeholder="או שם אחר"
                 autoComplete="off"
                 className={inputClass(false)}
               />

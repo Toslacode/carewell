@@ -48,6 +48,22 @@ export const NeedsReviewSchema = z.object({
 });
 
 export const ExtractionSchema = z.object({
+  /**
+   * Demographics spoken in passing — "משה בן 52".
+   *
+   * Kept apart from the clinical categories because it proposes a change to
+   * the patient's identity rather than adding to their record, and it is
+   * applied only on approval, never silently.
+   *
+   * There is deliberately no attendingDoctor here. A name in a round note
+   * ("הרופא שטיפל בו זה יוסי") is almost always a report about the past, not
+   * an instruction to reassign the ward doctor, and getting that wrong
+   * misattributes responsibility for a patient. Such mentions go to
+   * needsReview instead.
+   */
+  demographics: z
+    .object({ age: z.number().int().min(0).max(120).nullable().default(null) })
+    .default({ age: null }),
   chiefComplaint: lines,
   pastMedicalHistory: lines,
   socialStatus: lines,
@@ -258,6 +274,26 @@ export interface Discharge {
   blockers: DischargeBlocker[];
 }
 
+/* -------------------------------------------------------- what a round was */
+
+/**
+ * The round exactly as it was captured, before anything was sorted.
+ *
+ * Structured fields are an interpretation; this is the evidence behind them.
+ * A doctor reviewing a decision three days later needs to read what was
+ * actually said or written, not a tidied summary of it — so both sources are
+ * kept verbatim and kept apart, and neither is ever replaced by the extracted
+ * record.
+ */
+export interface RoundSource {
+  id: string;
+  at: number;
+  /** What the microphone heard. Null when the round was written, not spoken. */
+  transcript: string | null;
+  /** What the doctor typed. Null when the round was spoken, not written. */
+  note: string | null;
+}
+
 /* ------------------------------------------------------------ the letter */
 
 /** Where the patient is going. Mirrors the ward's own discharge form: home is
@@ -323,6 +359,14 @@ export interface Patient {
   bed: number;
   hospitalDay: number;
   primaryDiagnosis: string;
+  /**
+   * The ward doctor responsible for this patient.
+   *
+   * Set by a person and changed by a person. A doctor's name appearing inside
+   * a round note is not evidence that they have taken over the patient, so
+   * extraction never writes here — see ExtractionSchema.demographics.
+   */
+  attendingDoctor: string;
   status: PatientStatus;
   approvedClinicalData: ClinicalData;
   /** Null until a round is recorded. Holds everything awaiting review. */
@@ -332,11 +376,19 @@ export interface Patient {
   draftTasks: Task[];
   draftConsultations: Consultation[];
   draftDischarge: Discharge | null;
+  /** Demographic changes the open round proposes. Applied on approval only. */
+  draftDemographics: { age: number | null } | null;
   tasks: Task[];
   consultations: Consultation[];
   discharge: Discharge;
   lastRoundAt: number | null;
   lastTranscript: string | null;
+  /** The free-text note typed during the open round, kept verbatim beside the
+   *  transcript rather than merged into it — two sources, two records. */
+  roundNote: string | null;
+  /** Every approved round's raw input, newest last. This is the audit trail
+   *  the structured record is an interpretation of. */
+  rounds: RoundSource[];
   /**
    * When the patient actually left the ward.
    *
@@ -363,8 +415,19 @@ export interface PatientDetails {
   bed: number;
   hospitalDay: number;
   primaryDiagnosis: string;
+  attendingDoctor: string;
   status: PatientStatus;
 }
+
+/** The ward's roster, for the picker. Fictitious, like every other name in
+ *  this prototype. Not a closed list — a name can always be typed. */
+export const WARD_DOCTORS: ReadonlyArray<string> = [
+  'ד"ר יוסי כהן',
+  'ד"ר מיכל ברנע',
+  'ד"ר אבי שרון',
+  'ד"ר נועה גלעדי',
+  'ד"ר רון אלמוג',
+];
 
 export const HMOS: ReadonlyArray<Patient["hmo"]> = [
   "כללית",
@@ -438,17 +501,21 @@ export function newPatient(details: PatientDetails, roomId: string): Patient {
     bed: details.bed,
     hospitalDay: details.hospitalDay,
     primaryDiagnosis: details.primaryDiagnosis,
+    attendingDoctor: details.attendingDoctor,
     status: details.status,
     approvedClinicalData: emptyClinicalData(),
     draftClinicalData: null,
     draftTasks: [],
     draftConsultations: [],
     draftDischarge: null,
+    draftDemographics: null,
     tasks: [],
     consultations: [],
     discharge: { status: "unplanned", blockers: [] },
     lastRoundAt: null,
     lastTranscript: null,
+    roundNote: null,
+    rounds: [],
     dischargedAt: null,
     dischargeReport: null,
   };

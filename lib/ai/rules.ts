@@ -126,6 +126,65 @@ function extractVitals(text: string, out: Extraction) {
   if (rr) out.vitals.respiratoryRate = rr[1];
 }
 
+/* ------------------------------------------------------------ demographics */
+
+/**
+ * Age, when the note opens the way a doctor actually introduces a patient:
+ * "משה בן 52", "אישה בת 78".
+ *
+ * Guarded tightly — "בן" is also "son of" — by requiring the number to sit
+ * immediately after בן/בת and to be a plausible age. This is a proposal in any
+ * case: it reaches the patient only through the draft, and only if the round
+ * is approved.
+ */
+const AGE_RE = new RegExp(`${HB}(?:בן|בת)${HA}\\s+(\\d{1,3})(?!\\d)`);
+
+function extractAge(text: string, out: Extraction) {
+  const m = text.match(AGE_RE);
+  if (!m) return;
+  const age = Number(m[1]);
+  if (!Number.isFinite(age) || age < 1 || age > 120) return;
+  out.demographics.age = age;
+}
+
+/* --------------------------------------------------------- doctor mentions */
+
+/** Words that follow "הרופא" as grammar rather than as somebody's name. */
+const NOT_A_NAME =
+  /^(?:מטפל|מטפלת|המטפל|המטפלת|טיפל|טיפלה|שטיפל|שטיפלה|אמר|אמרה|ביקש|ביקשה|יבוא|תבוא|בדק|בדקה|כתב|כתבה|הורה|המליץ|המליצה|קבע|קבעה|של|את|הוא|היא|זה|זו|שלו|שלה|התורן|התורנית|הבכיר|הבכירה|בקהילה|המשפחה)$/;
+
+/**
+ * A doctor named inside a round note.
+ *
+ * Deliberately not routed to the attending-doctor field. "הרופא שטיפל בו זה
+ * יוסי" is a report about who treated the patient — in the ER, yesterday,
+ * before admission — and reading it as "reassign this patient to יוסי" would
+ * move responsibility for a patient on the strength of a passing clause.
+ * It is preserved and flagged instead, so a person decides.
+ */
+/** Two shapes only, both of which actually name somebody:
+ *  a title carrying the name ("ד״ר יוסי כהן"), and a copula pointing at it
+ *  ("הרופא שטיפל בו זה יוסי"). Anything vaguer is left alone — a note that
+ *  merely says "הרופא הורה" names nobody and has nothing to flag. */
+const DOCTOR_PATTERNS: RegExp[] = [
+  /(?:ד"ר|דר'|דוקטור)\s+([א-ת]{2,}(?:\s+[א-ת]{2,})?)/,
+  /רופא[א-ת]*\s+(?:[^.]*?\s)?(?:זה|זו|הוא|היא|היה|הייתה)\s+([א-ת]{2,}(?:\s+[א-ת]{2,})?)/,
+];
+
+function extractDoctorMention(clause: string, out: Extraction) {
+  if (!has(clause, /רופא|ד"ר|דר'|דוקטור/)) return;
+
+  for (const pattern of DOCTOR_PATTERNS) {
+    const named = clause.match(pattern)?.[1]?.trim();
+    if (!named || NOT_A_NAME.test(named)) continue;
+    out.needsReview.push({
+      text: clause,
+      reason: `הוזכר רופא (${named}) — לא שויך אוטומטית כרופא המטפל`,
+    });
+    return;
+  }
+}
+
 /* -------------------------------------------------------- past medical hx  */
 
 const CONDITIONS: Array<[RegExp, string]> = [
@@ -162,6 +221,13 @@ function extractHistory(clause: string, out: Extraction) {
 const SOCIAL_RULES: Array<[RegExp, string | ((m: RegExpMatchArray) => string)]> = [
   [/גר\s*לבד|גרה\s*לבד|חי\s*לבד/, "גר לבד"],
   [/גר\s*עם\s*(אשתו|בעלה|בתו|בנו|משפחתו|בת\s*זוגו|בן\s*זוגה)/, (m) => `גר עם ${m[1]}`],
+  // Who brought them in. Not the same claim as who they live with, so it is
+  // recorded as what it is rather than folded into the living-arrangement line.
+  // No \b anywhere: it is ASCII-only and never matches beside a Hebrew letter.
+  [
+    /(?:הגיע|הגיעה|הובא|הובאה|התקבל|התקבלה)[^.]*?עם\s+(אשתו|בעלה|בתו|בנו|בנה|משפחתו|משפחתה|בת\s*זוגו|בן\s*זוגה|מלווה)/,
+    (m) => `הגיע מלווה ב${m[1]}`,
+  ],
   [
     /(?:ה?בת|בתו)\s*(?:שלו|שלה)?\s*(?:עוזרת|מסייעת|מטפלת)/,
     "בתו מסייעת לו",
@@ -409,6 +475,7 @@ export function extractByRules(transcript: string): Extraction {
   if (!text) return out;
 
   extractVitals(text, out);
+  extractAge(text, out);
 
   for (const clause of clauses(text)) {
     extractHistory(clause.text, out);
@@ -419,6 +486,7 @@ export function extractByRules(transcript: string): Extraction {
     extractTreatment(clause.text, out);
     extractConsults(clause, out);
     extractDischarge(clause.text, out);
+    extractDoctorMention(clause.text, out);
     extractUncertain(clause.text, out);
   }
 

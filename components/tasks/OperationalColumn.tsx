@@ -753,6 +753,7 @@ function DraftStatusPanel({ patient }: { patient: Patient }) {
   const isDraft = patient.draftClinicalData !== null;
   const reviewCount = (patient.draftClinicalData ?? patient.approvedClinicalData)
     .needsReview.length;
+  const proposedAge = patient.draftDemographics?.age ?? null;
 
   return (
     <section
@@ -778,6 +779,19 @@ function DraftStatusPanel({ patient }: { patient: Patient }) {
                 {reviewCount} פריטים מסומנים כדורשים בדיקה
               </p>
             )}
+            {/* A demographic change the round proposed. Shown as a proposal
+                because it rewrites the patient's identity rather than adding
+                to their record — it takes effect on אישור סבב, not before. */}
+            {proposedAge !== null && (
+              <p className="mt-2 flex items-start gap-1.5 rounded-md border border-info-line bg-card/70 px-2.5 py-2 text-[13px] text-info">
+                <IconPencil className="mt-px h-4 w-4 shrink-0" />
+                <span>
+                  מהסבב עולה גיל <span className="tnum font-semibold">{proposedAge}</span>{" "}
+                  במקום <span className="tnum">{patient.age}</span> — יעודכן באישור
+                  הסבב.
+                </span>
+              </p>
+            )}
           </>
         ) : (
           <>
@@ -785,7 +799,7 @@ function DraftStatusPanel({ patient }: { patient: Patient }) {
             <p className="mt-1 text-[13px] leading-relaxed text-ink-muted">
               {patient.lastRoundAt
                 ? `הסבב האחרון אושר ב־${new Date(patient.lastRoundAt).toLocaleString("he-IL", { dateStyle: "short", timeStyle: "short" })}.`
-                : "טרם בוצע סבב מוקלט עבור מטופל זה."}
+                : "טרם תועד סבב עבור מטופל זה."}
             </p>
           </>
         )}

@@ -16,6 +16,7 @@ import {
   IconDocument,
   IconHeart,
   IconPencil,
+  IconStethoscope,
   IconTrash,
 } from "@/components/ui/icons";
 import { openTaskCount, useWard } from "@/lib/store/ward-store";
@@ -183,6 +184,14 @@ export function PatientCard({
                 className="col-span-2 sm:col-span-1"
               />
             </dl>
+
+            <p className="pointer-events-none mt-2.5 flex items-center gap-1.5 text-[13px] text-ink-muted">
+              <IconStethoscope className="h-4 w-4 shrink-0" />
+              רופא מטפל:{" "}
+              <span className="font-semibold text-navy-deep">
+                {patient.attendingDoctor || "לא שויך"}
+              </span>
+            </p>
 
             {/* Managing the patient, as opposed to reading them. In the flow
                 rather than floated over a corner: an overlay lands on whatever

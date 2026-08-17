@@ -4,6 +4,7 @@ import {
   type Patient,
   type Room,
   type Task,
+  WARD_DOCTORS,
   emptyClinicalData,
   item,
   reading,
@@ -652,6 +653,12 @@ const SEEDS: Record<number, Seed[]> = {
  *  so the "unavailable" state is reachable too. */
 const UNAVAILABLE_ROOMS = new Set([13]);
 
+/** Spread the roster across the ward so the field is visibly populated and
+ *  visibly varied, without writing a doctor into all forty seed entries.
+ *  Deterministic, so the demo looks the same on every run. */
+let doctorCursor = 0;
+const nextDoctor = () => WARD_DOCTORS[doctorCursor++ % WARD_DOCTORS.length];
+
 function buildPatient(seed: Seed, roomId: string): Patient {
   const patientId = id("p");
   const data = emptyClinicalData();
@@ -704,12 +711,14 @@ function buildPatient(seed: Seed, roomId: string): Patient {
     bed: seed.bed,
     hospitalDay: seed.hospitalDay,
     primaryDiagnosis: seed.primaryDiagnosis,
+    attendingDoctor: nextDoctor(),
     status: seed.status,
     approvedClinicalData: data,
     draftClinicalData: null,
     draftTasks: [],
     draftConsultations: [],
     draftDischarge: null,
+    draftDemographics: null,
     tasks,
     consultations,
     discharge: {
@@ -722,6 +731,8 @@ function buildPatient(seed: Seed, roomId: string): Patient {
     },
     lastRoundAt: null,
     lastTranscript: null,
+    roundNote: null,
+    rounds: [],
     dischargedAt: null,
     dischargeReport: null,
   };
@@ -734,6 +745,7 @@ export interface WardData {
 
 export function buildDemoWard(): WardData {
   n = 0;
+  doctorCursor = 0;
   const rooms: Room[] = [];
   const patients: Record<string, Patient> = {};
 

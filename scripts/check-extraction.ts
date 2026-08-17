@@ -107,6 +107,29 @@ check("סומן כדורש בדיקה", uncertain.needsReview, (v: typeof r.need
   v.length > 0,
 );
 
+/* --------------------------------------------------------------------------
+   A hand-typed round note rather than a transcript. Same extractor, so the
+   same guarantees have to hold — including the one that matters most here:
+   a doctor's name in the prose does not reassign the patient.
+   -------------------------------------------------------------------------- */
+
+console.log("\n── פתק כתוב ביד ──");
+const note = extractByRules(`משה בן 52 הגיע אתמול למיון עם אשתו.
+יש לו דופק 60 והרופא שטיפל בו זה יוסי.
+נמצא לחץ דם 120/80.`);
+
+check("גיל 52", note.demographics.age, (v: number | null) => v === 52);
+check("דופק 60", note.vitals.heartRate, (v: string | null) => v === "60");
+check("לחץ דם 120/80", note.vitals.bloodPressure, (v: string | null) => v === "120/80");
+check("הגיע מלווה באשתו", note.socialStatus, (v: string[]) =>
+  v.some((s) => s.includes("אשתו")),
+);
+check(
+  "שם הרופא סומן לבדיקה ולא שויך אוטומטית",
+  note.needsReview,
+  (v: typeof r.needsReview) => v.some((entry) => entry.reason.includes("יוסי")),
+);
+
 console.log(
   failures === 0
     ? "\n✓ כל הבדיקות עברו\n"
