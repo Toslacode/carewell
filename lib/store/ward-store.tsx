@@ -102,6 +102,43 @@ function mergeInto(
   return { items: fresh.length ? [...existing, ...fresh] : existing, added: fresh.length };
 }
 
+/**
+ * Push a set's numbers into the record's current-value vitals field.
+ *
+ * Only fields the set actually measured are written. A vital the set left
+ * blank keeps whatever the record already held — it may have come from a
+ * dictated round or an earlier observation, and a nurse who didn't take a
+ * respiratory rate has not asked for the last one to be erased.
+ *
+ * Applied to the approved record always, and mirrored into an open draft so
+ * the doctor sees it now and approving the round does not revert it.
+ */
+function writeVitalsThrough(patient: Patient, set: VitalSet): Patient {
+  const applyTo = (d: ClinicalData): ClinicalData => {
+    const vitals = { ...d.vitals };
+    for (const key of Object.keys(vitals) as VitalKey[]) {
+      const value = formatVital(set, key);
+      if (value === null) continue;
+      vitals[key] = { value, source: "manual", addedAt: set.measuredAt };
+    }
+    return { ...d, vitals };
+  };
+
+  const next: Patient = {
+    ...patient,
+    approvedClinicalData: applyTo(patient.approvedClinicalData),
+  };
+  if (next.draftClinicalData) next.draftClinicalData = applyTo(next.draftClinicalData);
+  return next;
+}
+
+/** The newest set in a list, or null. Used to decide whether an edit to a set
+ *  should also move the record's current values. */
+function newestSet(sets: VitalSet[]): VitalSet | null {
+  if (sets.length === 0) return null;
+  return sets.reduce((a, b) => (b.measuredAt > a.measuredAt ? b : a));
+}
+
 export interface MergeResult {
   data: ClinicalData;
   tasks: Task[];
@@ -293,6 +330,17 @@ interface WardContextValue {
       enteredBy: string;
     },
   ) => void;
+  updateVitalSet: (
+    patientId: string,
+    setId: string,
+    patch: Partial<Omit<VitalSet, "id">>,
+  ) => void;
+  updateNursingOutput: (
+    patientId: string,
+    entryId: string,
+    patch: Partial<Omit<NursingOutputEntry, "id" | "type">>,
+  ) => void;
+  updateNursingNote: (patientId: string, noteId: string, text: string) => void;
   deleteNursingNote: (patientId: string, noteId: string) => void;
   deleteNursingOutput: (patientId: string, entryId: string) => void;
   dismissReview: (patientId: string, reviewId: string) => void;
@@ -811,20 +859,10 @@ export function WardProvider({ children }: { children: React.ReactNode }) {
             enteredBy: entry.enteredBy,
           };
           next.vitalSets = [...(p.vitalSets ?? []), set];
-
-          const applyTo = (d: ClinicalData): ClinicalData => {
-            const vitals = { ...d.vitals };
-            for (const key of Object.keys(vitals) as VitalKey[]) {
-              const value = formatVital(set, key);
-              if (value === null) continue; // not measured this round — leave the last one
-              vitals[key] = { value, source: "manual", addedAt: entry.measuredAt };
-            }
-            return { ...d, vitals };
-          };
-
-          next.approvedClinicalData = applyTo(next.approvedClinicalData);
-          if (next.draftClinicalData) {
-            next.draftClinicalData = applyTo(next.draftClinicalData);
+          // Only when this is the newest reading. A set back-dated to earlier
+          // this morning is history, and must not overwrite a later one.
+          if (newestSet(next.vitalSets)?.id === set.id) {
+            next = writeVitalsThrough(next, set);
           }
         }
 
@@ -850,6 +888,58 @@ export function WardProvider({ children }: { children: React.ReactNode }) {
 
         return next;
       });
+    },
+    [update],
+  );
+
+  /**
+   * Correct one number in a set that is already recorded.
+   *
+   * A field set to undefined is cleared from the set, but the record's current
+   * value is left alone — clearing a reading says "I did not measure this",
+   * not "delete what anyone else recorded".
+   */
+  const updateVitalSet = useCallback(
+    (patientId: string, setId: string, patch: Partial<Omit<VitalSet, "id">>) => {
+      update(patientId, (p) => {
+        const sets = p.vitalSets ?? [];
+        if (!sets.some((s) => s.id === setId)) return p;
+        const updated = sets.map((s) => (s.id === setId ? { ...s, ...patch } : s));
+        let next: Patient = { ...p, vitalSets: updated };
+        const newest = newestSet(updated);
+        if (newest && newest.id === setId) next = writeVitalsThrough(next, newest);
+        return next;
+      });
+    },
+    [update],
+  );
+
+  const updateNursingOutput = useCallback(
+    (
+      patientId: string,
+      entryId: string,
+      patch: Partial<Omit<NursingOutputEntry, "id" | "type">>,
+    ) => {
+      update(patientId, (p) => ({
+        ...p,
+        nursingOutputs: (p.nursingOutputs ?? []).map((e) =>
+          e.id === entryId ? { ...e, ...patch } : e,
+        ),
+      }));
+    },
+    [update],
+  );
+
+  const updateNursingNote = useCallback(
+    (patientId: string, noteId: string, text: string) => {
+      const clean = text.trim();
+      if (!clean) return;
+      update(patientId, (p) => ({
+        ...p,
+        nursingNotes: (p.nursingNotes ?? []).map((n) =>
+          n.id === noteId ? { ...n, text: clean } : n,
+        ),
+      }));
     },
     [update],
   );
@@ -1160,6 +1250,9 @@ export function WardProvider({ children }: { children: React.ReactNode }) {
       addItem,
       setVital,
       recordNursingEntry,
+      updateVitalSet,
+      updateNursingOutput,
+      updateNursingNote,
       deleteNursingNote,
       deleteNursingOutput,
       dismissReview,
@@ -1201,6 +1294,9 @@ export function WardProvider({ children }: { children: React.ReactNode }) {
       addItem,
       setVital,
       recordNursingEntry,
+      updateVitalSet,
+      updateNursingOutput,
+      updateNursingNote,
       deleteNursingNote,
       deleteNursingOutput,
       dismissReview,

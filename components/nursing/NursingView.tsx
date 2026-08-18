@@ -13,6 +13,7 @@ import { useWard } from "@/lib/store/ward-store";
 import { fullWhen, shortWhen } from "@/lib/utils/when";
 import { cn } from "@/lib/utils/cn";
 import { NursingEntryDialog } from "@/components/nursing/NursingEntryDialog";
+import { InlineInput } from "@/components/clinical/EditableList";
 import { IconButton, PanelHeader } from "@/components/ui/primitives";
 import {
   IconChevronDown,
@@ -48,17 +49,24 @@ export function NursingView({ patient }: { patient: Patient }) {
 
         {/* The one primary action, and the last thing on the page so a thumb
             finds it without reaching. */}
-        <button
-          type="button"
-          onClick={() => setEntering(true)}
-          className={cn(
-            "inline-flex items-center justify-center gap-2 self-center rounded-chip bg-navy px-7 py-3.5",
-            "text-[15px] font-semibold text-on-navy shadow-card transition-colors hover:bg-navy-deep",
-          )}
-        >
-          <IconPlus className="h-[18px] w-[18px]" />
-          הזנה חדשה
-        </button>
+        <div className="flex flex-col items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setEntering(true)}
+            className={cn(
+              "inline-flex items-center justify-center gap-2 rounded-chip bg-navy px-7 py-3.5",
+              "text-[15px] font-semibold text-on-navy shadow-card transition-colors hover:bg-navy-deep",
+            )}
+          >
+            <IconPlus className="h-[18px] w-[18px]" />
+            הזנה חדשה
+          </button>
+          {/* Double-click leaves no mark on the screen, so it is said once for
+              the whole view rather than hinted at on every value. */}
+          <p className="text-[12px] text-ink-muted">
+            לתיקון ערך שכבר נרשם — לחיצה כפולה עליו
+          </p>
+        </div>
       </div>
 
       {entering && (
@@ -68,40 +76,168 @@ export function NursingView({ patient }: { patient: Patient }) {
   );
 }
 
+/* ---------------------------------------------------------- editing in place */
+
+/**
+ * Anything already recorded can be corrected where it sits: double-click the
+ * value and type over it.
+ *
+ * Double rather than single, deliberately. These are numbers a nurse reads far
+ * more often than they change, usually while holding a tablet one-handed, and
+ * a single tap would put a temperature into an editor every time somebody
+ * glanced at it. The second tap is the difference between reading and writing.
+ *
+ * `touch-action: manipulation` matters here: without it a browser waits to see
+ * whether a double-tap was meant as zoom, and the gesture either lags or turns
+ * into a zoom instead of an edit.
+ */
+function Editable({
+  value,
+  onSave,
+  label,
+  className,
+  editorClassName,
+  ltr,
+  children,
+}: {
+  /** What goes into the input when editing opens. */
+  value: string;
+  onSave: (next: string) => void;
+  /** Names the thing being edited, for the tooltip and screen readers. */
+  label: string;
+  className?: string;
+  editorClassName?: string;
+  ltr?: boolean;
+  children: React.ReactNode;
+}) {
+  const [editing, setEditing] = useState(false);
+
+  if (editing) {
+    return (
+      <span className={cn("block", editorClassName)}>
+        <InlineInput
+          initial={value}
+          ltr={ltr}
+          onCancel={() => setEditing(false)}
+          onSave={(next) => {
+            onSave(next);
+            setEditing(false);
+          }}
+        />
+      </span>
+    );
+  }
+
+  return (
+    <span
+      role="button"
+      tabIndex={0}
+      onDoubleClick={() => setEditing(true)}
+      onKeyDown={(e) => {
+        // The keyboard has no double-click; Enter is the equivalent commitment.
+        if (e.key === "Enter" || e.key === "F2") {
+          e.preventDefault();
+          setEditing(true);
+        }
+      }}
+      title={`${label} — לחיצה כפולה לעריכה`}
+      aria-label={`${label} — לחיצה כפולה לעריכה`}
+      className={cn(
+        "block cursor-text rounded-md transition-colors [touch-action:manipulation]",
+        "hover:bg-page-deep/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy/50",
+        className,
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
 /* ------------------------------------------------------------------ vitals */
 
-const VITAL_KEYS = [
-  "temperature",
-  "bloodPressure",
-  "heartRate",
-  "spo2",
-  "respiratoryRate",
-] as const;
+/**
+ * What a typed correction means for each vital.
+ *
+ * Returns null for anything that isn't a reading, and the caller then leaves
+ * the stored value alone — a slip of the thumb must not erase a measurement.
+ * An emptied field is handled the same way by the editor itself, which treats
+ * a blank submission as a cancel, so there is no path here that silently
+ * blanks a vital; removing one is a deliberate act done from the entry it
+ * belongs to.
+ */
+function parseVitalCell(key: string, raw: string): Partial<VitalSet> | null {
+  const text = raw.trim().replace(",", ".");
+
+  if (key === "bloodPressure") {
+    if (!text) return { systolicBP: undefined, diastolicBP: undefined };
+    const m = text.match(/^(\d{2,3})\s*[/\\]\s*(\d{2,3})$/);
+    if (!m) return null; // not a pressure — keep what was there
+    return { systolicBP: Number(m[1]), diastolicBP: Number(m[2]) };
+  }
+
+  const field = key as "temperature" | "heartRate" | "spo2" | "respiratoryRate";
+  if (!text) return { [field]: undefined };
+  const n = Number(text.replace(/[°%]/g, ""));
+  if (!Number.isFinite(n)) return null;
+  return { [field]: n };
+}
 
 /** The set as five short strings, in the order the ward reads them. */
-function vitalCells(set: VitalSet): Array<{ key: string; label: string; value: string }> {
+function vitalCells(
+  set: VitalSet,
+): Array<{ key: string; label: string; value: string; raw: string }> {
+  const bp =
+    set.systolicBP !== undefined && set.diastolicBP !== undefined
+      ? `${set.systolicBP}/${set.diastolicBP}`
+      : "";
   return [
-    { key: "temperature", label: VITAL_LABELS.temperature.label, value: set.temperature !== undefined ? `${set.temperature}°` : "—" },
+    {
+      key: "temperature",
+      label: VITAL_LABELS.temperature.label,
+      value: set.temperature !== undefined ? `${set.temperature}°` : "—",
+      raw: set.temperature !== undefined ? String(set.temperature) : "",
+    },
     {
       key: "bloodPressure",
       label: VITAL_LABELS.bloodPressure.label,
-      value:
-        set.systolicBP !== undefined && set.diastolicBP !== undefined
-          ? `${set.systolicBP}/${set.diastolicBP}`
-          : "—",
+      value: bp || "—",
+      raw: bp,
     },
-    { key: "heartRate", label: VITAL_LABELS.heartRate.label, value: set.heartRate !== undefined ? String(set.heartRate) : "—" },
-    { key: "spo2", label: VITAL_LABELS.spo2.label, value: set.spo2 !== undefined ? `${set.spo2}%` : "—" },
-    { key: "respiratoryRate", label: VITAL_LABELS.respiratoryRate.label, value: set.respiratoryRate !== undefined ? String(set.respiratoryRate) : "—" },
+    {
+      key: "heartRate",
+      label: VITAL_LABELS.heartRate.label,
+      value: set.heartRate !== undefined ? String(set.heartRate) : "—",
+      raw: set.heartRate !== undefined ? String(set.heartRate) : "",
+    },
+    {
+      key: "spo2",
+      label: VITAL_LABELS.spo2.label,
+      value: set.spo2 !== undefined ? `${set.spo2}%` : "—",
+      raw: set.spo2 !== undefined ? String(set.spo2) : "",
+    },
+    {
+      key: "respiratoryRate",
+      label: VITAL_LABELS.respiratoryRate.label,
+      value: set.respiratoryRate !== undefined ? String(set.respiratoryRate) : "—",
+      raw: set.respiratoryRate !== undefined ? String(set.respiratoryRate) : "",
+    },
   ];
 }
 
 function VitalsPanel({ patient, latest }: { patient: Patient; latest: VitalSet | null }) {
+  const { updateVitalSet } = useWard();
   const [openHistory, setOpenHistory] = useState(false);
   const history = useMemo(
     () => [...(patient.vitalSets ?? [])].sort((a, b) => b.measuredAt - a.measuredAt),
     [patient.vitalSets],
   );
+
+  const editCell = (setId: string, key: string, raw: string) => {
+    const patch = parseVitalCell(key, raw);
+    // Unparseable input leaves the reading alone rather than blanking it —
+    // a slip of the thumb should not erase a measurement.
+    if (patch) updateVitalSet(patient.id, setId, patch);
+  };
 
   return (
     <section className="overflow-hidden rounded-card border border-line bg-card shadow-card">
@@ -127,14 +263,23 @@ function VitalsPanel({ patient, latest }: { patient: Patient; latest: VitalSet |
                 <span className="block truncate text-[12px] text-ink-muted">
                   {cell.label}
                 </span>
-                <span
-                  className={cn(
-                    "tnum mt-0.5 block text-[21px] font-semibold leading-tight",
-                    cell.value === "—" ? "text-ink-decor" : "text-navy-deep",
-                  )}
+                <Editable
+                  label={cell.label}
+                  value={cell.raw}
+                  ltr={cell.key === "bloodPressure"}
+                  onSave={(next) => editCell(latest.id, cell.key, next)}
+                  className="-mx-1 mt-0.5 px-1"
+                  editorClassName="mt-0.5"
                 >
-                  {cell.value}
-                </span>
+                  <span
+                    className={cn(
+                      "tnum block text-[21px] font-semibold leading-tight",
+                      cell.value === "—" ? "text-ink-decor" : "text-navy-deep",
+                    )}
+                  >
+                    {cell.value}
+                  </span>
+                </Editable>
               </li>
             ))}
           </ul>
@@ -169,13 +314,26 @@ function VitalsPanel({ patient, latest }: { patient: Patient; latest: VitalSet |
                           {set.enteredBy}
                         </span>
                       </div>
-                      <ul className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1">
+                      {/* Editable here too: a number mistyped four hours ago
+                          is still wrong, and the fix belongs where it is
+                          noticed. Only the newest set moves the record's
+                          current values — the store decides that. */}
+                      <ul className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1">
                         {vitalCells(set)
                           .filter((c) => c.value !== "—")
                           .map((c) => (
                             <li key={c.key} className="text-[13px] text-ink">
                               <span className="text-ink-muted">{c.label} </span>
-                              <span className="tnum font-medium">{c.value}</span>
+                              <Editable
+                                label={`${c.label} · ${shortWhen(set.measuredAt)}`}
+                                value={c.raw}
+                                ltr={c.key === "bloodPressure"}
+                                onSave={(next) => editCell(set.id, c.key, next)}
+                                className="-mx-1 inline-block px-1 align-middle"
+                                editorClassName="inline-block w-[132px] align-middle"
+                              >
+                                <span className="tnum font-medium">{c.value}</span>
+                              </Editable>
                             </li>
                           ))}
                       </ul>
@@ -197,9 +355,21 @@ function VitalsPanel({ patient, latest }: { patient: Patient; latest: VitalSet |
 
 /* ------------------------------------------------------------------ output */
 
+/** A typed correction to an output reading. Empty or unparseable is refused
+ *  rather than turned into a zero, which would read as a real measurement. */
+function editOutputValue(raw: string): number | null {
+  const n = Number(raw.trim().replace(",", "."));
+  return Number.isFinite(n) && n >= 0 ? n : null;
+}
+
 function OutputPanel({ patient }: { patient: Patient }) {
-  const { deleteNursingOutput } = useWard();
+  const { deleteNursingOutput, updateNursingOutput } = useWard();
   const [openType, setOpenType] = useState<NursingOutputType | null>(null);
+
+  const editValue = (entryId: string, raw: string) => {
+    const value = editOutputValue(raw);
+    if (value !== null) updateNursingOutput(patient.id, entryId, { value });
+  };
 
   const byType = useMemo(() => {
     const map = new Map<NursingOutputType, NursingOutputEntry[]>();
@@ -235,9 +405,17 @@ function OutputPanel({ patient }: { patient: Patient }) {
                   <span className="min-w-0 flex-1 text-[14px] text-ink-muted">
                     {meta.short}
                   </span>
-                  <span className="tnum shrink-0 text-[16px] font-semibold text-navy-deep">
-                    {formatValue(newest)}
-                  </span>
+                  <Editable
+                    label={meta.short}
+                    value={newest.value !== undefined ? String(newest.value) : ""}
+                    onSave={(next) => editValue(newest.id, next)}
+                    className="-mx-1 shrink-0 px-1"
+                    editorClassName="w-[132px]"
+                  >
+                    <span className="tnum text-[16px] font-semibold text-navy-deep">
+                      {formatValue(newest)}
+                    </span>
+                  </Editable>
                   <span className="tnum shrink-0 text-[13px] text-ink-muted">
                     · {shortWhen(newest.measuredAt)}
                   </span>
@@ -276,9 +454,17 @@ function OutputPanel({ patient }: { patient: Patient }) {
                         key={entry.id}
                         className="group/out flex items-center gap-3 px-4 py-2.5 sm:px-5"
                       >
-                        <span className="tnum shrink-0 text-[14px] font-medium text-ink">
-                          {formatValue(entry)}
-                        </span>
+                        <Editable
+                          label={`${meta.short} · ${shortWhen(entry.measuredAt)}`}
+                          value={entry.value !== undefined ? String(entry.value) : ""}
+                          onSave={(next) => editValue(entry.id, next)}
+                          className="-mx-1 shrink-0 px-1"
+                          editorClassName="w-[124px]"
+                        >
+                          <span className="tnum text-[14px] font-medium text-ink">
+                            {formatValue(entry)}
+                          </span>
+                        </Editable>
                         <span className="tnum shrink-0 text-[12px] text-ink-muted">
                           {shortWhen(entry.measuredAt)}
                         </span>
@@ -325,7 +511,7 @@ function formatValue(entry: NursingOutputEntry): string {
 /* ------------------------------------------------------------------- notes */
 
 function NotesPanel({ patient }: { patient: Patient }) {
-  const { deleteNursingNote } = useWard();
+  const { deleteNursingNote, updateNursingNote } = useWard();
   const notes = useMemo(
     () => [...(patient.nursingNotes ?? [])].sort((a, b) => b.createdAt - a.createdAt),
     [patient.nursingNotes],
@@ -343,9 +529,16 @@ function NotesPanel({ patient }: { patient: Patient }) {
         <ul className="flex flex-col divide-y divide-line">
           {notes.map((entry) => (
             <li key={entry.id} className="group/note px-4 py-3 sm:px-5">
-              <p className="whitespace-pre-wrap text-[14px] leading-relaxed text-ink">
-                {entry.text}
-              </p>
+              <Editable
+                label="הערה סיעודית"
+                value={entry.text}
+                onSave={(next) => updateNursingNote(patient.id, entry.id, next)}
+                className="-mx-1 px-1"
+              >
+                <span className="block whitespace-pre-wrap text-[14px] leading-relaxed text-ink">
+                  {entry.text}
+                </span>
+              </Editable>
               <div className="mt-1.5 flex items-center gap-2">
                 <span className="tnum text-[12px] text-ink-muted">
                   {shortWhen(entry.createdAt)}
