@@ -8,6 +8,8 @@ import { OperationalColumn } from "@/components/tasks/OperationalColumn";
 import { RoundWorkspace } from "@/components/round/RoundWorkspace";
 import { RoundSources } from "@/components/round/RoundSources";
 import { AttendingDoctor } from "@/components/patients/AttendingDoctor";
+import { type PatientView, ViewSwitch } from "@/components/patients/ViewSwitch";
+import { NursingView } from "@/components/nursing/NursingView";
 import { PatientForm } from "@/components/patients/PatientForm";
 import { DischargeReportDialog } from "@/components/patients/DischargeReportDialog";
 import { ConfirmButton } from "@/components/ui/ConfirmButton";
@@ -43,6 +45,9 @@ export default function PatientPage({
   const [structuring, setStructuring] = useState(false);
   const [editing, setEditing] = useState(false);
   const [dischargeOpen, setDischargeOpen] = useState(false);
+  // The doctor's view is the default: this screen is the round screen, and
+  // nursing is the deliberate detour from it.
+  const [view, setView] = useState<PatientView>("doctor");
   const onPhaseChange = useCallback(
     (phase: string) => setStructuring(phase === "structuring"),
     [],
@@ -202,21 +207,40 @@ export default function PatientPage({
             />
           </dl>
 
-          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-            <div className="flex flex-col gap-4">
-              <ClinicalRecord patient={patient} structuring={structuring} />
-              {/* The evidence, under the interpretation drawn from it. */}
-              <RoundSources patient={patient} />
-            </div>
-            <OperationalColumn patient={patient} />
+          {/* Which job you are here to do. Below the header and above the
+              content, because it changes the content and nothing else.
+              Pinned under the top bar rather than left in the flow: on a phone
+              the round workspace is tall enough to cover this spot on first
+              paint, which would leave the switch there but untappable. */}
+          <div className="sticky top-[62px] z-[31] -mx-4 mb-4 flex justify-center bg-page/85 px-4 py-2 backdrop-blur-sm sm:-mx-6 sm:px-6">
+            <ViewSwitch view={view} onChange={setView} />
           </div>
 
+          {view === "doctor" ? (
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+              <div className="flex flex-col gap-4">
+                <ClinicalRecord patient={patient} structuring={structuring} />
+                {/* The evidence, under the interpretation drawn from it. */}
+                <RoundSources patient={patient} />
+              </div>
+              <OperationalColumn patient={patient} />
+            </div>
+          ) : (
+            <NursingView patient={patient} />
+          )}
+
           {/* room for the sticky workspace so the last panel is never covered */}
-          <div className="h-40" aria-hidden="true" />
+          <div className={view === "doctor" ? "h-40" : "h-10"} aria-hidden="true" />
         </div>
       </main>
 
-      <RoundWorkspace patient={patient} onPhaseChange={onPhaseChange} />
+      {/* The round workspace belongs to the round, so it stays with the
+          doctor's view. Unmounting it is safe here in a way it is not between
+          the two round modes: switching to סיעוד is leaving the round, not
+          moving within it, and the draft it produced lives in the store. */}
+      {view === "doctor" && (
+        <RoundWorkspace patient={patient} onPhaseChange={onPhaseChange} />
+      )}
 
       {editing && (
         <PatientForm

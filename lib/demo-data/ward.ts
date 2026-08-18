@@ -733,6 +733,9 @@ function buildPatient(seed: Seed, roomId: string): Patient {
     lastTranscript: null,
     roundNote: null,
     rounds: [],
+    vitalSets: [],
+    nursingOutputs: [],
+    nursingNotes: [],
     dischargedAt: null,
     dischargeReport: null,
   };

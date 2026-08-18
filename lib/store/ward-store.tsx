@@ -15,6 +15,7 @@ import {
   type DischargeReport,
   type DischargeStatus,
   type Extraction,
+  type NursingOutputEntry,
   type Patient,
   type PatientDetails,
   type PatientStatus,
@@ -23,8 +24,11 @@ import {
   type TaskPriority,
   type TaskStatus,
   type VitalKey,
+  type VitalSet,
   cloneClinicalData,
   derivePriority,
+  formatVital,
+  isEmptyVitalSet,
   newId,
   newPatient,
 } from "@/lib/schemas/clinical";
@@ -279,6 +283,18 @@ interface WardContextValue {
   deleteItem: (patientId: string, path: ListPath, itemId: string) => void;
   addItem: (patientId: string, path: ListPath, text: string) => void;
   setVital: (patientId: string, key: VitalKey, value: string | null) => void;
+  recordNursingEntry: (
+    patientId: string,
+    entry: {
+      vitals?: Omit<VitalSet, "id" | "measuredAt" | "enteredBy">;
+      measuredAt: number;
+      outputs?: Array<Omit<NursingOutputEntry, "id" | "enteredBy">>;
+      note?: string;
+      enteredBy: string;
+    },
+  ) => void;
+  deleteNursingNote: (patientId: string, noteId: string) => void;
+  deleteNursingOutput: (patientId: string, entryId: string) => void;
   dismissReview: (patientId: string, reviewId: string) => void;
   moveReviewToOther: (patientId: string, reviewId: string) => void;
 
@@ -756,6 +772,108 @@ export function WardProvider({ children }: { children: React.ReactNode }) {
     [editData],
   );
 
+  /**
+   * One nursing entry: a set of vitals, some output readings, a note, or any
+   * combination — whatever the nurse actually had to record at that moment.
+   *
+   * Vitals are written twice on purpose, and it is not duplication of the
+   * record. `vitalSets` is the observation history: who measured, when, and
+   * which readings belonged to the same bedside visit. The record's `vitals`
+   * field is the current value of each vital, which every existing screen
+   * already reads — so writing through to it is what makes the doctor's מדדים
+   * section show the nurse's numbers without knowing nursing exists.
+   *
+   * The write-through lands in the approved record even while a round is open,
+   * because a measurement is a fact rather than a proposal and must not be
+   * thrown away if the doctor discards their draft. It is mirrored into the
+   * draft as well, so the doctor sees it immediately and approving the round
+   * does not revert to the pre-measurement values.
+   */
+  const recordNursingEntry = useCallback(
+    (
+      patientId: string,
+      entry: {
+        vitals?: Omit<VitalSet, "id" | "measuredAt" | "enteredBy">;
+        measuredAt: number;
+        outputs?: Array<Omit<NursingOutputEntry, "id" | "enteredBy">>;
+        note?: string;
+        enteredBy: string;
+      },
+    ) => {
+      update(patientId, (p) => {
+        let next = { ...p };
+
+        if (entry.vitals && !isEmptyVitalSet(entry.vitals)) {
+          const set: VitalSet = {
+            ...entry.vitals,
+            id: newId("vs"),
+            measuredAt: entry.measuredAt,
+            enteredBy: entry.enteredBy,
+          };
+          next.vitalSets = [...(p.vitalSets ?? []), set];
+
+          const applyTo = (d: ClinicalData): ClinicalData => {
+            const vitals = { ...d.vitals };
+            for (const key of Object.keys(vitals) as VitalKey[]) {
+              const value = formatVital(set, key);
+              if (value === null) continue; // not measured this round — leave the last one
+              vitals[key] = { value, source: "manual", addedAt: entry.measuredAt };
+            }
+            return { ...d, vitals };
+          };
+
+          next.approvedClinicalData = applyTo(next.approvedClinicalData);
+          if (next.draftClinicalData) {
+            next.draftClinicalData = applyTo(next.draftClinicalData);
+          }
+        }
+
+        for (const output of entry.outputs ?? []) {
+          next.nursingOutputs = [
+            ...(next.nursingOutputs ?? []),
+            { ...output, id: newId("no"), enteredBy: entry.enteredBy },
+          ];
+        }
+
+        const noteText = entry.note?.trim();
+        if (noteText) {
+          next.nursingNotes = [
+            ...(next.nursingNotes ?? []),
+            {
+              id: newId("nn"),
+              text: noteText,
+              createdAt: entry.measuredAt,
+              enteredBy: entry.enteredBy,
+            },
+          ];
+        }
+
+        return next;
+      });
+    },
+    [update],
+  );
+
+  const deleteNursingNote = useCallback(
+    (patientId: string, noteId: string) => {
+      update(patientId, (p) => ({
+        ...p,
+        nursingNotes: (p.nursingNotes ?? []).filter((n) => n.id !== noteId),
+      }));
+    },
+    [update],
+  );
+
+  const deleteNursingOutput = useCallback(
+    (patientId: string, entryId: string) => {
+      update(patientId, (p) => ({
+        ...p,
+        nursingOutputs: (p.nursingOutputs ?? []).filter((e) => e.id !== entryId),
+      }));
+    },
+    [update],
+  );
+
   const dismissReview = useCallback(
     (patientId: string, reviewId: string) => {
       editData(patientId, (d) => ({
@@ -1041,6 +1159,9 @@ export function WardProvider({ children }: { children: React.ReactNode }) {
       deleteItem,
       addItem,
       setVital,
+      recordNursingEntry,
+      deleteNursingNote,
+      deleteNursingOutput,
       dismissReview,
       moveReviewToOther,
       setTaskStatus,
@@ -1079,6 +1200,9 @@ export function WardProvider({ children }: { children: React.ReactNode }) {
       deleteItem,
       addItem,
       setVital,
+      recordNursingEntry,
+      deleteNursingNote,
+      deleteNursingOutput,
       dismissReview,
       moveReviewToOther,
       setTaskStatus,

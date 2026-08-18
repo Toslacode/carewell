@@ -274,6 +274,113 @@ export interface Discharge {
   blockers: DischargeBlocker[];
 }
 
+/* ------------------------------------------------------ nursing observation */
+
+/**
+ * One set of vitals, measured together.
+ *
+ * The unit is the observation session, not the individual number. A nurse at
+ * a bedside takes a temperature, a pressure and a pulse within the same
+ * minute, and five separately timestamped values would misrepresent that as
+ * five visits — and make it impossible to say which pressure went with which
+ * fever. So one timestamp covers the set.
+ *
+ * Every field is optional because not every round of observations captures
+ * everything, and a form that demands all five gets filled with guesses.
+ */
+export interface VitalSet {
+  id: string;
+  measuredAt: number;
+  enteredBy: string;
+  temperature?: number;
+  systolicBP?: number;
+  diastolicBP?: number;
+  heartRate?: number;
+  spo2?: number;
+  respiratoryRate?: number;
+}
+
+export type NursingOutputType =
+  | "urine-output"
+  | "bladder-residual"
+  | "urine-drainage"
+  | "bowel-movement";
+
+/** Whether a bladder residual was taken before or after the patient voided —
+ *  the same number means different things either side of that. */
+export type ResidualContext = "before-voiding" | "after-voiding";
+
+export interface NursingOutputEntry {
+  id: string;
+  type: NursingOutputType;
+  /** Millilitres, or a count for bowel movements. */
+  value?: number;
+  unit?: string;
+  measuredAt: number;
+  enteredBy: string;
+  note?: string;
+  context?: ResidualContext;
+}
+
+export interface NursingNote {
+  id: string;
+  text: string;
+  createdAt: number;
+  enteredBy: string;
+}
+
+/** Fictitious, like every other name in this prototype. */
+export const NURSING_STAFF: ReadonlyArray<string> = [
+  "אחות דנה לוי",
+  "אחות רות אביב",
+  "אח עומר נחום",
+  "אחות סיגל ברק",
+];
+
+/** The most recent set of observations, or null before any were taken. */
+export function latestVitalSet(patient: Patient): VitalSet | null {
+  const sets = patient.vitalSets ?? [];
+  if (sets.length === 0) return null;
+  return sets.reduce((newest, s) => (s.measuredAt > newest.measuredAt ? s : newest));
+}
+
+/**
+ * How a measured number is written into the clinical record's vitals field.
+ *
+ * Matches the strings the record already holds, so a nurse's entry and a
+ * dictated one are indistinguishable to every screen that reads them. Units
+ * that the field label already carries are left off; the percent sign is kept
+ * because the record's own values carry it ("94% באוויר חדר").
+ */
+export function formatVital(set: VitalSet, key: VitalKey): string | null {
+  switch (key) {
+    case "temperature":
+      return set.temperature === undefined ? null : String(set.temperature);
+    case "bloodPressure":
+      return set.systolicBP === undefined || set.diastolicBP === undefined
+        ? null
+        : `${set.systolicBP}/${set.diastolicBP}`;
+    case "heartRate":
+      return set.heartRate === undefined ? null : String(set.heartRate);
+    case "spo2":
+      return set.spo2 === undefined ? null : `${set.spo2}%`;
+    case "respiratoryRate":
+      return set.respiratoryRate === undefined ? null : String(set.respiratoryRate);
+  }
+}
+
+/** True when the set carries no measurement at all — nothing worth saving. */
+export function isEmptyVitalSet(set: Partial<VitalSet>): boolean {
+  return (
+    set.temperature === undefined &&
+    set.systolicBP === undefined &&
+    set.diastolicBP === undefined &&
+    set.heartRate === undefined &&
+    set.spo2 === undefined &&
+    set.respiratoryRate === undefined
+  );
+}
+
 /* -------------------------------------------------------- what a round was */
 
 /**
@@ -389,6 +496,18 @@ export interface Patient {
   /** Every approved round's raw input, newest last. This is the audit trail
    *  the structured record is an interpretation of. */
   rounds: RoundSource[];
+  /**
+   * Nursing observations, oldest first.
+   *
+   * The record's `vitals` field holds the current value of each vital and is
+   * what every screen reads; this is the history of how those values were
+   * arrived at — who measured, when, and which readings belonged to the same
+   * bedside visit. Recording a set updates both, so the doctor's view shows
+   * the newest numbers without knowing anything about nursing.
+   */
+  vitalSets: VitalSet[];
+  nursingOutputs: NursingOutputEntry[];
+  nursingNotes: NursingNote[];
   /**
    * When the patient actually left the ward.
    *
@@ -516,6 +635,9 @@ export function newPatient(details: PatientDetails, roomId: string): Patient {
     lastTranscript: null,
     roundNote: null,
     rounds: [],
+    vitalSets: [],
+    nursingOutputs: [],
+    nursingNotes: [],
     dischargedAt: null,
     dischargeReport: null,
   };

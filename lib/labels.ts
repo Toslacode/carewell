@@ -2,7 +2,9 @@ import type {
   ConsultState,
   DischargeDestination,
   DischargeStatus,
+  NursingOutputType,
   PatientStatus,
+  ResidualContext,
   TaskPriority,
   TaskStatus,
 } from "@/lib/schemas/clinical";
@@ -101,6 +103,29 @@ export const CLINICAL_SECTIONS = [
   { key: "treatmentPlan", index: 7, title: "תכנית טיפול" },
   { key: "other", index: 8, title: "אחר / הערות" },
 ] as const;
+
+/** The nursing output types, in the order the ward records them. */
+export const OUTPUT_LABELS: Record<
+  NursingOutputType,
+  { label: string; unit: string; short: string }
+> = {
+  "urine-output": { label: "כמות שתן", unit: "מ״ל", short: "שתן" },
+  "bladder-residual": { label: "שארית שתן באולטרסאונד", unit: "מ״ל", short: "שארית שתן" },
+  "urine-drainage": { label: "ריקון שתן", unit: "מ״ל", short: "ריקון שתן" },
+  "bowel-movement": { label: "יציאות", unit: "", short: "יציאות" },
+};
+
+export const OUTPUT_ORDER: NursingOutputType[] = [
+  "urine-output",
+  "bladder-residual",
+  "urine-drainage",
+  "bowel-movement",
+];
+
+export const RESIDUAL_CONTEXT: Record<ResidualContext, string> = {
+  "before-voiding": "לפני מתן שתן",
+  "after-voiding": "אחרי מתן שתן",
+};
 
 export const VITAL_LABELS = {
   temperature: { label: "חום", unit: "°C" },

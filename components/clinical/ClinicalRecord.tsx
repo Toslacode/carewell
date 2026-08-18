@@ -2,6 +2,8 @@
 
 import { useState, type ReactNode } from "react";
 import type { ClinicalData, Patient, VitalKey } from "@/lib/schemas/clinical";
+import { formatVital, latestVitalSet } from "@/lib/schemas/clinical";
+import { shortWhen } from "@/lib/utils/when";
 import { TEST_SUBSECTIONS, VITAL_LABELS } from "@/lib/labels";
 import { type ListPath, useWard } from "@/lib/store/ward-store";
 import { cn } from "@/lib/utils/cn";
@@ -15,6 +17,7 @@ import { Reveal } from "@/components/motion/Reveal";
 import {
   IconAlert,
   IconChat,
+  IconChevronDown,
   IconDocument,
   IconFlask,
   IconPencil,
@@ -247,12 +250,81 @@ const VITAL_ORDER: VitalKey[] = [
 ];
 
 function VitalsGrid({ patient, data }: { patient: Patient; data: ClinicalData }) {
+  const [openHistory, setOpenHistory] = useState(false);
+  // The grid itself is unchanged — it reads the record's vitals as it always
+  // has, which is exactly what a nursing entry writes into. All that is added
+  // is when the newest set was measured, because five numbers with no time on
+  // them cannot be told apart from five numbers taken hours ago.
+  const latest = latestVitalSet(patient);
+  const history = [...(patient.vitalSets ?? [])].sort(
+    (a, b) => b.measuredAt - a.measuredAt,
+  );
+
   return (
-    <ul className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
-      {VITAL_ORDER.map((key) => (
-        <VitalCard key={key} patient={patient} vkey={key} reading={data.vitals[key]} />
-      ))}
-    </ul>
+    <div className="flex flex-col gap-2.5">
+      {latest && (
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+          <p className="text-[12px] text-ink-muted">
+            נמדד ב־
+            <span className="tnum font-semibold text-navy-deep">
+              {shortWhen(latest.measuredAt)}
+            </span>
+            <span className="ms-2 text-ink-decor">{latest.enteredBy}</span>
+          </p>
+          {history.length > 1 && (
+            <button
+              type="button"
+              onClick={() => setOpenHistory((v) => !v)}
+              aria-expanded={openHistory}
+              className="inline-flex items-center gap-1 rounded-chip px-1.5 py-0.5 text-[12px] font-medium text-ink-muted transition-colors hover:bg-page-deep hover:text-navy"
+            >
+              היסטוריית מדדים
+              <IconChevronDown
+                className={cn(
+                  "h-3.5 w-3.5 transition-transform duration-200",
+                  openHistory && "rotate-180",
+                )}
+              />
+            </button>
+          )}
+        </div>
+      )}
+
+      <ul className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
+        {VITAL_ORDER.map((key) => (
+          <VitalCard key={key} patient={patient} vkey={key} reading={data.vitals[key]} />
+        ))}
+      </ul>
+
+      {openHistory && (
+        <ul className="flex flex-col divide-y divide-line rounded-[12px] border border-line bg-card-sunken/50">
+          {history.map((set) => (
+            <li key={set.id} className="px-3 py-2.5">
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="tnum text-[13px] font-semibold text-navy-deep">
+                  {shortWhen(set.measuredAt)}
+                </span>
+                <span className="truncate text-[12px] text-ink-decor">
+                  {set.enteredBy}
+                </span>
+              </div>
+              <p className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-ink">
+                {VITAL_ORDER.map((key) => {
+                  const value = formatVital(set, key);
+                  if (value === null) return null;
+                  return (
+                    <span key={key}>
+                      <span className="text-ink-muted">{VITAL_LABELS[key].label} </span>
+                      <span className="tnum font-medium">{value}</span>
+                    </span>
+                  );
+                })}
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 
